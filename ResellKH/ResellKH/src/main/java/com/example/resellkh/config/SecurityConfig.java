@@ -1,7 +1,7 @@
 package com.example.resellkh.config;
 
-import com.example.resellkh.model.jwt.JwtAuthEntryPoint;
-import com.example.resellkh.model.jwt.JwtAuthFilter;
+import com.example.resellkh.jwt.JwtAuthEntryPoint;
+import com.example.resellkh.jwt.JwtAuthFilter;
 import com.example.resellkh.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

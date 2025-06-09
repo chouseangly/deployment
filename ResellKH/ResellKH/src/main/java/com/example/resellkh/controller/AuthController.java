@@ -2,7 +2,7 @@ package com.example.resellkh.controller;
 
 import com.example.resellkh.model.dto.*;
 import com.example.resellkh.model.entity.Auth;
-import com.example.resellkh.model.jwt.JwtService;
+import com.example.resellkh.jwt.JwtService;
 import com.example.resellkh.service.OtpService;
 import com.example.resellkh.service.AuthService;
 import lombok.RequiredArgsConstructor;

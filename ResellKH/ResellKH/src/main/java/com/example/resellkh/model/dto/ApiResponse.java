@@ -1,4 +1,5 @@
-package com.example.resellkh.model;
+package com.example.resellkh.model.dto;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

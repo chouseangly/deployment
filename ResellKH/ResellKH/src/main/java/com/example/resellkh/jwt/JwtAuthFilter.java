@@ -1,4 +1,4 @@
-package com.example.resellkh.model.jwt;
+package com.example.resellkh.jwt;
 import com.example.resellkh.service.AuthService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
