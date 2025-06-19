@@ -21,6 +21,8 @@ public class Product {
     private Double discountPercent;
     private String description;
     private String location;
+    private double Latitude;
+    private double Longitude;
     private String condition;
     private List<String> fileUrls;
     private LocalDateTime createdAt;

@@ -1,5 +1,6 @@
 package com.example.resellkh.model.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,6 +23,9 @@ public class ProductWithFilesDto {
     private String description;
     private String location;
     private String condition;
+    private double Latitude;
+    private double Longitude;
     private LocalDateTime createdAt;
     private List<String> fileUrls;
+
 }

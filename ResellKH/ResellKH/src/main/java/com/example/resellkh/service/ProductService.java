@@ -13,4 +13,7 @@ public interface ProductService {
 
     ProductWithFilesDto updateProduct(Long id, ProductRequest request, MultipartFile[] files);
 
+    List<ProductWithFilesDto> searchByImageUrl(String imageUrl);
+
+    List<ProductWithFilesDto> findNearbyProducts(double lat, double lng, double  radiusKm);
 }

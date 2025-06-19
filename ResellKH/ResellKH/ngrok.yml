@@ -1,0 +1,6 @@
+version: "2"
+authtoken: ${NGROK_AUTHTOKEN}
+tunnels:
+  backend:
+    addr: http://backend:8080
+    proto: http

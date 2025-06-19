@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auths")
@@ -61,15 +62,21 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest login) {
         Auth auth = authService.findByEmail(login.getEmail());
+
         if (auth == null || !passwordEncoder.matches(login.getPassword(), auth.getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Invalid credentials"));
         }
+
         if (!auth.isEnabled()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Account not verified");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Account not verified"));
         }
+
         String token = jwtService.generateToken(auth);
         return ResponseEntity.ok(new JwtResponse(token));
     }
+
 
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@RequestParam String email) {
@@ -118,4 +125,17 @@ public class AuthController {
                 )
         );
     }
+
+    @PostMapping("/google")
+    public ResponseEntity<ApiResponse<Auth>> registerWithGoogle(@RequestBody GoogleUserDto googleUserDto) {
+        Auth auth = authService.registerWithGoogle(googleUserDto);
+        return ResponseEntity.ok(new ApiResponse<>(
+                "Google registration successful",
+                auth,
+                HttpStatus.OK.value(),
+                LocalDateTime.now()
+        ));
+    }
+
 }
+

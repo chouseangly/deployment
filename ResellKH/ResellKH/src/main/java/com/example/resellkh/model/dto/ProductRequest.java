@@ -16,5 +16,8 @@ public class ProductRequest {
     private String productStatus;
     private String description;
     private String location;
+    private Double latitude;
+    private Double longitude;
     private String condition;
+
 }

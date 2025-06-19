@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Configuration;
@@ -21,11 +22,14 @@ import org.springframework.context.annotation.Configuration;
 )
 
 @SpringBootApplication
+@MapperScan("com.example.resellkh.repository")
 public class ResellKhApplication {
 
 
     public static void main(String[] args) {
+
         SpringApplication.run(ResellKhApplication.class, args);
+
     }
 
 }

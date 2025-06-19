@@ -8,9 +8,15 @@ CREATE TABLE products (
                           product_status VARCHAR(50),
                           description TEXT,
                           location TEXT,
+                          latitude DOUBLE PRECISION,
+                          longitude DOUBLE PRECISION,
                           condition VARCHAR(50),
                           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
 );
+
+
+
 CREATE TABLE users (
                        user_id SERIAL PRIMARY KEY,
                        user_name VARCHAR(50),
@@ -38,7 +44,13 @@ CREATE TABLE product_images (
                                 product_id INTEGER REFERENCES products(product_id),
                                 url TEXT
 );
-DROP TABLE IF EXISTS product_history;
+CREATE TABLE product_embeddings (
+                                    id SERIAL PRIMARY KEY,
+                                    product_id BIGINT REFERENCES products(product_id) ON DELETE CASCADE UNIQUE,
+                                    vector JSONB NOT NULL
+);
+
+
 
 CREATE TABLE product_history (
                                  id SERIAL PRIMARY KEY,
@@ -85,6 +97,7 @@ CREATE TABLE otp_number (
                             verified BOOLEAN DEFAULT FALSE
 );
 
+
 CREATE TABLE contact_info (
                               id SERIAL PRIMARY KEY,
                               user_id INTEGER REFERENCES users(user_id),
@@ -92,14 +105,14 @@ CREATE TABLE contact_info (
 );
 
 INSERT INTO main_category (name) VALUES
-                                           ('Accessories'),
-                                           ('Beauty'),
-                                           ('Equipment Bag & Shoes'),
-                                           ('Book'),
-                                           ('Fashion'),
-                                           ('Home'),
-                                           ('Sports & Kids'),
-                                           ('Electronic'),
-                                           ('Vehicle'),
-                                           ('Other');
+                                     ('Accessories'),
+                                     ('Beauty'),
+                                     ('Equipment Bag & Shoes'),
+                                     ('Book'),
+                                     ('Fashion'),
+                                     ('Home'),
+                                     ('Sports & Kids'),
+                                     ('Electronic'),
+                                     ('Vehicle'),
+                                     ('Other');
 

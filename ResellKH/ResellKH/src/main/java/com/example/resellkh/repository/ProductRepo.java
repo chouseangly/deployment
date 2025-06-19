@@ -11,10 +11,10 @@ public interface ProductRepo {
     @Insert("""
         INSERT INTO products (
             product_name, user_id, main_category_id, product_price,discount_percent,
-            product_status, description, location, condition, created_at
+            product_status, description, location, condition,latitude,longitude, created_at
         ) VALUES (
             #{productName}, #{userId}, #{mainCategoryId}, #{productPrice},#{discountPercent},
-            #{productStatus}, #{description}, #{location}, #{condition}, #{createdAt}
+            #{productStatus}, #{description}, #{location}, #{condition},#{latitude},#{longitude} #{createdAt}
         )
     """)
     @Options(useGeneratedKeys = true, keyProperty = "productId", keyColumn = "product_id")
