@@ -12,5 +12,10 @@ public class UserProfileRequest {
     private String profileImage;
     private String coverImage;
     private LocalDate birthday;
-    private String Address;
+    private String address;    // fixed lowercase 'a'
+    private String telegramUrl;
+    private String slogan;
+    private String userName;
+    private String firstName;
+    private String lastName;
 }

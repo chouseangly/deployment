@@ -1,5 +1,7 @@
 package com.example.resellkh.service.Impl;
 
+import com.example.resellkh.jwt.JwtService;
+import com.example.resellkh.model.dto.AuthResponse;
 import com.example.resellkh.model.dto.GoogleUserDto;
 import com.example.resellkh.repository.authRepo;
 import com.example.resellkh.service.AuthService;
@@ -9,8 +11,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -19,6 +23,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final authRepo authRepo;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     @Override
     public Auth findByEmail(String email) {
@@ -45,28 +50,52 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
     public Auth resetPassword(String email, String password) {
         authRepo.updatePasswordByEmail(email, password);
         return authRepo.findByEmail(email);
     }
 
-    @Override
-    public Auth registerWithGoogle(GoogleUserDto googleUserDto) {
+    public AuthResponse registerWithGoogle(GoogleUserDto googleUserDto) {
         Optional<Auth> existing = authRepo.findByEmailOptional(googleUserDto.getEmail());
-        if (existing.isPresent()) return existing.get();
 
-        Auth auth = new Auth();
-        auth.setFirstName(googleUserDto.getFirstName());
-        auth.setLastName(googleUserDto.getLastName());
-        auth.setUserName(googleUserDto.getFirstName() + " " + googleUserDto.getLastName());
-        auth.setEmail(googleUserDto.getEmail());
-        auth.setPassword(passwordEncoder.encode("google_oauth_dummy")); // always encrypt dummy
-        auth.setRole("USER");
-        auth.setEnabled(true);
-        auth.setCreatedAt(LocalDateTime.now());
+        Auth auth;
+        if (existing.isPresent()) {
+            auth = existing.get();
+        } else {
+            auth = new Auth();
+            auth.setFirstName(googleUserDto.getFirstName());
+            auth.setLastName(googleUserDto.getLastName());
+            auth.setUserName(googleUserDto.getFirstName() + " " + googleUserDto.getLastName());
+            auth.setEmail(googleUserDto.getEmail());
+            auth.setPassword(passwordEncoder.encode("google_oauth_dummy"));
+            auth.setRole("USER");
+            auth.setEnabled(true);
+            auth.setCreatedAt(LocalDateTime.now());
 
-        authRepo.insertUser(auth);
-        return authRepo.findByEmail(googleUserDto.getEmail());
+            authRepo.insertUser(auth);
+
+            // After insert, fetch user to get the generated ID
+            auth = authRepo.findByEmail(googleUserDto.getEmail());
+        }
+
+        String token = jwtService.generateToken(auth);
+
+        return new AuthResponse(
+                token,
+                auth.getRole(),
+                auth.getUserId(),
+                auth.getEmail(),
+                auth.getFirstName(),
+                auth.getLastName()
+        );
+    }
+
+
+
+    @Override
+    public List<Auth> getAllUser() {
+        return authRepo.getAllUser();
     }
 
 }

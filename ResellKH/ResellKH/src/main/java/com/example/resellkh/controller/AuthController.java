@@ -3,8 +3,12 @@ package com.example.resellkh.controller;
 import com.example.resellkh.model.dto.*;
 import com.example.resellkh.model.entity.Auth;
 import com.example.resellkh.jwt.JwtService;
+import com.example.resellkh.model.entity.UserProfile;
+import com.example.resellkh.service.Impl.AuthServiceImpl;
+import com.example.resellkh.service.Impl.UserProfileServiceImpl;
 import com.example.resellkh.service.OtpService;
 import com.example.resellkh.service.AuthService;
+import com.example.resellkh.service.UserProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -23,6 +28,8 @@ public class AuthController {
     private final OtpService otpService;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final AuthServiceImpl authServiceImpl;
+    private final UserProfileService userProfileService;
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody AuthRequest authRequest) {
@@ -47,11 +54,37 @@ public class AuthController {
         boolean isValid = otpService.verifyOtp(otpRequest);
         if (isValid) {
             authService.enableUser(otpRequest.getEmail());
+
+            Auth auth = authService.findByEmail(otpRequest.getEmail());
+
+            Long userId = auth.getUserId().longValue();
+
+            if (!userProfileService.existsByUserId(userId)) {
+                UserProfile profile = UserProfile.builder()
+                        .userId(userId)
+                        .firstName(auth.getFirstName())
+                        .lastName(auth.getLastName())
+                        .userName(auth.getUserName())
+                        .profileImage("/images/default-avatar.png")
+                        .coverImage("/images/default-cover.jpg")
+                        .build();
+
+                userProfileService.createUserProfileAfterVerify(profile);
+            }
+
             return ResponseEntity.ok("OTP verified. User activated.");
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid OTP");
         }
     }
+
+
+    @GetMapping("/finduserbyemail")
+    public ResponseEntity<Auth> findUserByEmail(@RequestParam String email) {
+        Auth auth = authService.findByEmail(email);
+        return ResponseEntity.ok(auth);
+    }
+
 
     @PostMapping("/resend-otp")
     public ResponseEntity<String> resendOtp(@RequestBody OtpRequest otpRequest) {
@@ -74,8 +107,16 @@ public class AuthController {
         }
 
         String token = jwtService.generateToken(auth);
-        return ResponseEntity.ok(new JwtResponse(token));
+        String role = auth.getRole();
+
+        return ResponseEntity.ok(Map.of(
+                "token", token,
+                "role", role,
+                "message", "Login successful"
+        ));
     }
+
+
 
 
     @PostMapping("/forgot-password")
@@ -103,17 +144,18 @@ public class AuthController {
 
         Auth user = authService.findByEmail(resetRequest.getEmail());
         if (user == null) {
-            return ResponseEntity.ok(
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     new ApiResponse<>(
                             "User not found",
                             null,
-                            HttpStatus.OK.value(),
+                            HttpStatus.NOT_FOUND.value(),
                             LocalDateTime.now()
                     )
             );
         }
 
         String encodedPassword = passwordEncoder.encode(resetRequest.getNewPassword());
+
         Auth updated = authService.resetPassword(resetRequest.getEmail(), encodedPassword);
 
         return ResponseEntity.ok(
@@ -127,15 +169,27 @@ public class AuthController {
     }
 
     @PostMapping("/google")
-    public ResponseEntity<ApiResponse<Auth>> registerWithGoogle(@RequestBody GoogleUserDto googleUserDto) {
-        Auth auth = authService.registerWithGoogle(googleUserDto);
+    public ResponseEntity<ApiResponse<AuthResponse>> registerWithGoogle(@RequestBody GoogleUserDto googleUserDto) {
+        AuthResponse authResponse = authService.registerWithGoogle(googleUserDto);
         return ResponseEntity.ok(new ApiResponse<>(
                 "Google registration successful",
-                auth,
+                authResponse,
                 HttpStatus.OK.value(),
                 LocalDateTime.now()
         ));
     }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<Auth>>> getAllUser() {
+        List<Auth> users = authServiceImpl.getAllUser();
+        return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse<>(
+                "Get all users successfully",
+                users,
+                HttpStatus.OK.value(),
+                LocalDateTime.now()
+        ));
+    }
+
 
 }
 

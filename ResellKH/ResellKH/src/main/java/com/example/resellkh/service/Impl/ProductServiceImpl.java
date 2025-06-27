@@ -48,7 +48,7 @@ public class ProductServiceImpl implements ProductService {
     private String pinataSecretApiKey;
 
     private static final String PINATA_URL = "https://api.pinata.cloud/pinning/pinFileToIPFS";
-    private static final String PYTHON_VECTOR_URL = "http://127.0.0.1:8000/extract-vector";
+    private static final String PYTHON_VECTOR_URL ="https://regions-gray-colony-tsunami.trycloudflare.com/extract-vector";
 
     @Override
     public ProductWithFilesDto uploadProductWithCategoryName(ProductRequest request, MultipartFile[] files) {
@@ -133,9 +133,14 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<ProductWithFilesDto> searchByImageUrl(String imageUrl) {
-        List<Double> inputVector = callImageVectorAPI(imageUrl);
+    public List<ProductWithFilesDto> searchByImageUrl(MultipartFile file) {
+        // Step 1: Upload file to Pinata
+        String ipfsUrl = uploadFileToPinata(file);
 
+        // Step 2: Call vector API with full IPFS URL
+        List<Double> inputVector = callImageVectorAPI(ipfsUrl);
+
+        // Step 3: Compare with existing vectors
         List<ProductEmbeddingRepo.ProductEmbeddingRecord> all = productEmbeddingRepo.getAllEmbeddings();
         List<ProductWithSimilarity> similarities = new ArrayList<>();
 
@@ -157,6 +162,8 @@ public class ProductServiceImpl implements ProductService {
                 .limit(10)
                 .toList();
     }
+
+
 
     @Override
     public List<ProductWithFilesDto> findNearbyProducts(double lat, double lng, double radiusKm) {

@@ -1,6 +1,7 @@
 package com.example.resellkh.model.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
@@ -14,6 +15,7 @@ import java.util.Collections;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class Auth implements UserDetails {
 
     private Integer userId;
@@ -54,4 +56,8 @@ public class Auth implements UserDetails {
 
     @Override
     public boolean isEnabled() { return true; }
+
+    public String getUserName() {
+        return userName;
+    }
 }

@@ -2,6 +2,8 @@ package com.example.resellkh.repository;
 
 import com.example.resellkh.model.entity.Auth;
 import org.apache.ibatis.annotations.*;
+
+import java.util.List;
 import java.util.Optional;
 
 @Mapper
@@ -9,7 +11,7 @@ public interface authRepo {
 
     @Select("SELECT * FROM users WHERE email = #{email}")
     @ResultMap("UserResult")
-    Optional<Auth> findByEmailOptional(String email);
+    Optional<Auth> findByEmailOptional(@Param("email") String email);
 
     @Select("SELECT * FROM users WHERE email = #{email}")
     @Results(id = "UserResult", value = {
@@ -37,4 +39,9 @@ public interface authRepo {
 
     @Update("UPDATE users SET password = #{password} WHERE email = #{email}")
     void updatePasswordByEmail(@Param("email") String email, @Param("password") String password);
+
+    @Select("SELECT * FROM users")
+    @ResultMap("UserResult")
+    List<Auth> getAllUser();
+
 }

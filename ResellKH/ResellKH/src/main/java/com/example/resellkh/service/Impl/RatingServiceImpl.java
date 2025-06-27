@@ -28,8 +28,11 @@ public class RatingServiceImpl implements RatingService {
         return savedRating != null ? savedRating : rating;
     }
 
+
     @Override
     public List<Rating> getRatingsByUserId(int ratedUserId) {
         return ratingRepo.getRatingsByUserId(ratedUserId);
     }
+
+
 }

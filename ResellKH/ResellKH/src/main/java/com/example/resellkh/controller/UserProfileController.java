@@ -14,6 +14,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/profile")
@@ -62,19 +64,20 @@ public class UserProfileController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<UserProfile>> getUserProfiles() {
-        UserProfile userProfile = profileService.getUserProfiles();
+    public ResponseEntity<ApiResponse<List<UserProfile>>> getUserProfiles() {
+        List<UserProfile> userProfiles = profileService.getUserProfiles();
 
-        if (userProfile == null) {
+        if (userProfiles == null || userProfiles.isEmpty()) {
             return ResponseEntity.ok(
-                    new ApiResponse<>("No user profiles found", null, HttpStatus.OK.value(), LocalDateTime.now())
+                    new ApiResponse<>("No user profiles found", Collections.emptyList(), HttpStatus.OK.value(), LocalDateTime.now())
             );
         }
 
         return ResponseEntity.ok(
-                new ApiResponse<>("Get user profile successfully", userProfile, HttpStatus.OK.value(), LocalDateTime.now())
+                new ApiResponse<>("Get user profiles successfully", userProfiles, HttpStatus.OK.value(), LocalDateTime.now())
         );
     }
+
 
     @GetMapping("/{userId}")
     public ResponseEntity<ApiResponse<UserProfile>> getProfile(@PathVariable Long userId) {

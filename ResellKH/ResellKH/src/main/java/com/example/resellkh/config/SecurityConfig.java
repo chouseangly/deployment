@@ -7,7 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.*;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -22,6 +23,7 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
+
     private final JwtAuthFilter jwtAuthFilter;
     private final JwtAuthEntryPoint jwtAuthEntrypoint;
     private final AuthService authService;
@@ -48,19 +50,26 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         .requestMatchers(
-                                "/api/v1/auths/**",
-                                "/api/v1/profile/**",
-                                "/api/v1/products/**",
-                                "/api/v1/products/search-by-image",
-                                "/api/v1/favourites/**",
-                                "/api/v1/ratings/**",
-                                "/api/v1/notifications/**",
-                                "/api/v1/contactInfo/**",
-                                "/api/v1/product-history/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**"
+                                "/api/v1/auths/register",
+                                "/api/v1/auths/login",
+                                "/api/v1/auths/verify-otp",
+                                "/api/v1/auths/resend-otp",
+                                "/api/v1/auths/forgot-password",
+                                "/api/v1/auths/verify-reset-otp",
+                                "/api/v1/auths/reset-new-password",
+                                "/api/v1/auths/google"
                         ).permitAll()
+
+
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
+
+
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthEntrypoint))

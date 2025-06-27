@@ -1,9 +1,12 @@
 package com.example.resellkh.model.entity;
-import lombok.Data;
+import lombok.*;
 
 import java.time.LocalDate;
+@AllArgsConstructor
+@NoArgsConstructor
 
 @Data
+@Builder
 public class UserProfile {
     private Long profileId;
     private Long userId;
@@ -13,5 +16,10 @@ public class UserProfile {
     private String coverImage;
     private LocalDate birthday;
     private String Address;
+    private String telegramUrl;
+    private String slogan;
+    private String userName;
+    private String firstName;
+    private String lastName;
 }
 

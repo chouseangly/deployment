@@ -1,8 +1,11 @@
 package com.example.resellkh.service;
+import com.example.resellkh.model.dto.AuthResponse;
 import com.example.resellkh.model.dto.GoogleUserDto;
 import com.example.resellkh.model.entity.Auth;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+
+import java.util.List;
 
 public interface AuthService extends UserDetailsService {
     Auth findByEmail(String email);
@@ -13,6 +16,9 @@ public interface AuthService extends UserDetailsService {
     void enableUser(String email);
     Auth resetPassword(String email, String password);
 
-    Auth registerWithGoogle(GoogleUserDto googleUserDto);
+    AuthResponse registerWithGoogle(GoogleUserDto googleUserDto);
+
+   List<Auth> getAllUser( );
+
 }
 

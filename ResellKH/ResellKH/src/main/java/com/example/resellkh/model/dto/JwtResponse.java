@@ -7,4 +7,5 @@ import lombok.*;
 @NoArgsConstructor
 public class JwtResponse {
     private String token;
+    private String role;
 }

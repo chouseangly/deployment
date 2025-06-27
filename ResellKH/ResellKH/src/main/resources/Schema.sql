@@ -38,6 +38,17 @@ CREATE TABLE user_profile (
                               cover_image TEXT,
                               address TEXT
 );
+UPDATE user_profile SET first_name = 'loun', last_name = 'siven' WHERE user_id = 2;
+--Add New Column
+ALTER TABLE user_profile ADD COLUMN telegram_url VARCHAR(255),
+                        ADD COLUMN slogan TEXT,
+                        ADD COLUMN user_name VARCHAR(50),
+                        ADD COLUMN first_name VARCHAR(50),
+                        ADD COLUMN last_name VARCHAR(50);
+DELETE FROM users WHERE user_id = 7;
+
+INSERT INTO user_profile(user_id, first_name, last_name) VALUES (6, 'loun', 'siven');
+UPDATE user_profile SET profile_image = 'https://gateway.pinata.cloud/ipfs/QmQ2pi5ptqpvJixDEsLRQxDQafcJGLv6hhjKxZUb2cp9iQ' WHER profile_id = 3;;
 
 CREATE TABLE product_images (
                                 id SERIAL PRIMARY KEY,
@@ -115,4 +126,7 @@ INSERT INTO main_category (name) VALUES
                                      ('Electronic'),
                                      ('Vehicle'),
                                      ('Other');
+TRUNCATE TABLE users restart  identity  cascade;
+delete from users where user_id = 11;
+
 

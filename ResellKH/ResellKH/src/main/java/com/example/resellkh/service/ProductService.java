@@ -1,6 +1,5 @@
 package com.example.resellkh.service;
 
-import com.example.resellkh.model.entity.Product;
 import com.example.resellkh.model.dto.ProductRequest;
 import com.example.resellkh.model.dto.ProductWithFilesDto;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,7 +12,7 @@ public interface ProductService {
 
     ProductWithFilesDto updateProduct(Long id, ProductRequest request, MultipartFile[] files);
 
-    List<ProductWithFilesDto> searchByImageUrl(String imageUrl);
+    List<ProductWithFilesDto> searchByImageUrl(MultipartFile file);
 
     List<ProductWithFilesDto> findNearbyProducts(double lat, double lng, double  radiusKm);
 }

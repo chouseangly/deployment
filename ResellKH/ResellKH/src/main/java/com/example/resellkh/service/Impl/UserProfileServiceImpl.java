@@ -21,6 +21,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -92,9 +94,11 @@ public class UserProfileServiceImpl implements UserProfileService {
     }
 
     @Override
-    public UserProfile getUserProfiles() {
+    public List<UserProfile> getUserProfiles() {
         return userProfileRepo.getUserProfiles();
     }
+
+
 
     @Override
     public UserProfile getProfile(Long userId) {
@@ -127,4 +131,13 @@ public class UserProfileServiceImpl implements UserProfileService {
             }
         }
     }
+    @Override
+    public void createUserProfileAfterVerify(UserProfile userProfile){
+        userProfileRepo.createUserProfileAfterVerify(userProfile);
+    }
+    @Override
+    public boolean existsByUserId(Long userId) {
+        return userProfileRepo.existsByUserId(userId);
+    }
+
 }
