@@ -36,7 +36,12 @@ public interface UserProfileRepo {
             profile_image = #{profileImage},
             cover_image = #{coverImage},
             birthday = #{birthday},
-            address = #{address}
+            address = #{address},
+            telegram_url = #{telegramUrl},
+            slogan  = #{slogan},
+            user_name = #{userName},
+            first_name = #{firstName},
+            last_name = #{lastName}
         WHERE user_id = #{userId}
     """)
     void updateUserProfile(UserProfileRequest request);

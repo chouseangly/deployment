@@ -3,6 +3,7 @@ package com.example.resellkh.controller;
 import com.example.resellkh.model.dto.ApiResponse;
 import com.example.resellkh.model.dto.ProductRequest;
 import com.example.resellkh.model.dto.ProductWithFilesDto;
+import com.example.resellkh.model.entity.Product;
 import com.example.resellkh.repository.ProductEmbeddingRepo;
 import com.example.resellkh.service.Impl.ProductServiceImpl;
 import com.example.resellkh.service.ProductService;
@@ -24,17 +25,20 @@ public class ProductController {
     private final ProductService productService;
     private final ProductServiceImpl productServiceImpl;
 
-    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/upload",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ProductWithFilesDto>> uploadProductWithCategoryName(
             @RequestParam("productName") String productName,
             @RequestParam("userId") Long userId,
-            @RequestParam("categoryName") String categoryName,
+            @RequestParam("mainCategoryId") Long mainCategoryId,
             @RequestParam("productPrice") Double productPrice,
             @RequestParam("discountPercent") Double discountPercent,
             @RequestParam("productStatus") String productStatus,
             @RequestParam("description") String description,
             @RequestParam("location") String location,
+            @RequestParam("latitude" ) Double latitude,
+            @RequestParam("longitude") Double longitude,
             @RequestParam("condition") String condition,
+            @RequestParam("telegramUrl") String telegramUrl,
             @RequestPart("files") MultipartFile[] files
     ) {
         if (files == null || files.length < 1) {
@@ -48,7 +52,7 @@ public class ProductController {
             );
         }
 
-        double[] latLng = getLatLngFromLocation(location);
+       /* double[] latLng = getLatLngFromLocation(location);
         if (latLng == null) {
             return ResponseEntity.badRequest().body(
                     new ApiResponse<>(
@@ -58,13 +62,13 @@ public class ProductController {
                             LocalDateTime.now()
                     )
             );
-        }
+        }*/
 
-        ProductRequest request = new ProductRequest(productName, userId, categoryName, productPrice,
-                discountPercent, productStatus, description, location, latLng[0], latLng[1], condition);
+        ProductRequest request = new ProductRequest(productName, userId, mainCategoryId, productPrice,
+                discountPercent, productStatus, description, location, latitude, longitude, condition, telegramUrl);
 
         ProductWithFilesDto product = productService.uploadProductWithCategoryName(request, files);
-        product.setCategoryName(categoryName);
+    //    product.setCategoryName(categoryName);
 
         return ResponseEntity.ok(
                 new ApiResponse<>(
@@ -76,58 +80,64 @@ public class ProductController {
         );
     }
 
-    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/updateproduct/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ProductWithFilesDto>> updateProduct(
             @PathVariable("id") Long id,
-            @RequestParam("productName") String productName,
-            @RequestParam("userId") Long userId,
-            @RequestParam("categoryName") String categoryName,
-            @RequestParam("productPrice") Double productPrice,
-            @RequestParam("discountPercent") Double discountPercent,
-            @RequestParam("productStatus") String productStatus,
-            @RequestParam("description") String description,
-            @RequestParam("location") String location,
-            @RequestParam("condition") String condition,
-            @RequestParam("files") MultipartFile[] files
+            @RequestParam(value = "productName", required = false) String productName,
+            @RequestParam(value = "userId", required = false) Long userId,
+            @RequestParam(value = "mainCategoryId", required = false) Long mainCategoryId,
+            @RequestParam(value = "productPrice", required = false) Double productPrice,
+            @RequestParam(value = "discountPercent", required = false) Double discountPercent,
+            @RequestParam(value = "productStatus", required = false) String productStatus,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "location", required = false) String location,
+            @RequestParam(value = "condition", required = false) String condition,
+            @RequestParam(value = "telegramUrl", required = false) String telegramUrl,
+            @RequestParam(value = "files", required = false) MultipartFile[] files
     ) {
-        if (files == null || files.length < 1) {
-            return ResponseEntity.badRequest().body(
-                    new ApiResponse<>(
-                            "You must upload at least 1 image or video file.",
-                            null,
-                            HttpStatus.BAD_REQUEST.value(),
-                            LocalDateTime.now()
-                    )
-            );
+        // Convert location to lat/lng if provided
+        Double latitude = null;
+        Double longitude = null;
+
+        if (location != null && !location.isEmpty()) {
+            double[] latLng = getLatLngFromLocation(location);
+            if (latLng == null) {
+                return ResponseEntity.badRequest().body(
+                        new ApiResponse<>("Invalid location. Could not determine coordinates.", null, HttpStatus.BAD_REQUEST.value(), LocalDateTime.now())
+                );
+            }
+            latitude = latLng[0];
+            longitude = latLng[1];
         }
 
-        double[] latLng = getLatLngFromLocation(location);
-        if (latLng == null) {
-            return ResponseEntity.badRequest().body(
-                    new ApiResponse<>(
-                            "Invalid location. Could not determine coordinates.",
-                            null,
-                            HttpStatus.BAD_REQUEST.value(),
-                            LocalDateTime.now()
-                    )
-            );
-        }
-
-        ProductRequest request = new ProductRequest(productName, userId, categoryName, productPrice,
-                discountPercent, productStatus, description, location, latLng[0], latLng[1], condition);
+        ProductRequest request = new ProductRequest(
+                productName,
+                userId,
+                mainCategoryId,
+                productPrice,
+                discountPercent,
+                productStatus,
+                description,
+                location,
+                latitude,
+                longitude,
+                condition,
+                telegramUrl
+        );
 
         ProductWithFilesDto updatedProduct = productService.updateProduct(id, request, files);
-        updatedProduct.setCategoryName(categoryName);
+
+        if (updatedProduct == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    new ApiResponse<>("Product not found", null, HttpStatus.NOT_FOUND.value(), LocalDateTime.now())
+            );
+        }
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
-                        "Product updated successfully (first 5 files stored)",
-                        updatedProduct,
-                        HttpStatus.OK.value(),
-                        LocalDateTime.now()
-                )
+                new ApiResponse<>("Product updated successfully", updatedProduct, HttpStatus.OK.value(), LocalDateTime.now())
         );
     }
+
 
     private double[] getLatLngFromLocation(String location) {
         String url = "https://nominatim.openstreetmap.org/search?q=" + location + "&format=json&limit=1";
@@ -155,6 +165,7 @@ public class ProductController {
         return null;
     }
 
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductWithFilesDto>> getProductWithFiles(@PathVariable Long id) {
         ProductWithFilesDto dto = productService.getProductWithFilesById(id);
@@ -168,7 +179,24 @@ public class ProductController {
                         .build()
         );
     }
+    @GetMapping("/getproductbyuserid/{userId}")
+    public ResponseEntity<ApiResponse<List<ProductWithFilesDto>>> getProductByUserId(
+            @PathVariable Long userId) {
 
+        List<ProductWithFilesDto> products = productService.getProductsByUserId(userId);
+        String message = products.isEmpty() ?
+                "No products found for user ID: " + userId :
+                "Products fetched successfully";
+
+        return ResponseEntity.ok(
+                ApiResponse.<List<ProductWithFilesDto>>builder()
+                        .message(message)
+                        .payload(products)
+                        .status(HttpStatus.OK)
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
+    }
     @GetMapping
     public ResponseEntity<ApiResponse<List<ProductWithFilesDto>>> getAll() {
         List<ProductWithFilesDto> list = productService.getAllProductsWithFiles();
@@ -207,11 +235,12 @@ public class ProductController {
                 )
         );
     }
-    @GetMapping("/nearby")
+    @GetMapping("/nearby/{lat}/{lng}")
     public ResponseEntity<ApiResponse<List<ProductWithFilesDto>>> getNearbyProducts(
-            @RequestParam double lat,
-            @RequestParam double lng) {
-        List<ProductWithFilesDto> products = productService.findNearbyProducts(lat, lng, 5); // radius = 5 km
+            @PathVariable double lat,
+            @PathVariable double lng
+            ) {
+        List<ProductWithFilesDto> products = productService.findNearbyProducts(lat, lng); // radius = 5 km
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         "Nearby products fetched successfully",
@@ -219,6 +248,19 @@ public class ProductController {
                         HttpStatus.OK.value(),
                         LocalDateTime.now()
                 )
+        );
+    }
+
+    @GetMapping("/getbycategoryid/{mainCategoryId}")
+    public ResponseEntity<ApiResponse<List<ProductWithFilesDto>>> getProductByCategoryId(@PathVariable Integer mainCategoryId) {
+        List<ProductWithFilesDto> products = productService.getProductsByCategoryId(mainCategoryId);
+        return ResponseEntity.ok(
+                ApiResponse.<List<ProductWithFilesDto>>builder()
+                        .message("All products by categoryId")
+                        .payload(products)
+                        .status(HttpStatus.OK.value())
+                        .timestamp(LocalDateTime.now())
+                        .build()
         );
     }
 

@@ -3,9 +3,11 @@ package com.example.resellkh.controller;
 import com.example.resellkh.model.dto.*;
 import com.example.resellkh.model.entity.Auth;
 import com.example.resellkh.jwt.JwtService;
+import com.example.resellkh.model.entity.Notification;
 import com.example.resellkh.model.entity.UserProfile;
 import com.example.resellkh.service.Impl.AuthServiceImpl;
 import com.example.resellkh.service.Impl.UserProfileServiceImpl;
+import com.example.resellkh.service.NotificationService;
 import com.example.resellkh.service.OtpService;
 import com.example.resellkh.service.AuthService;
 import com.example.resellkh.service.UserProfileService;
@@ -16,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -30,6 +33,7 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final AuthServiceImpl authServiceImpl;
     private final UserProfileService userProfileService;
+    private final NotificationService notificationService;
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody AuthRequest authRequest) {
@@ -65,8 +69,6 @@ public class AuthController {
                         .firstName(auth.getFirstName())
                         .lastName(auth.getLastName())
                         .userName(auth.getUserName())
-                        .profileImage("/images/default-avatar.png")
-                        .coverImage("/images/default-cover.jpg")
                         .build();
 
                 userProfileService.createUserProfileAfterVerify(profile);
@@ -105,6 +107,13 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "Account not verified"));
         }
+        Notification notification = Notification.builder()
+                .userId(auth.getUserId())
+                .title("Welcome to ResellKH")
+                .content("Welcome to ResellKH! We’re excited to have you join our community. As a new member, you can explore great deals, post your products, and connect with trusted buyers and sellers. Stay updated with the latest promotions, features, and security tips. Thank you for choosing ResellKH — let’s grow together!")
+                .typeId(1L)
+                .build();
+        notificationService.createNotificationWithType(notification);
 
         String token = jwtService.generateToken(auth);
         String role = auth.getRole();
@@ -112,6 +121,11 @@ public class AuthController {
         return ResponseEntity.ok(Map.of(
                 "token", token,
                 "role", role,
+                "userId", auth.getUserId(),
+                "firstName", auth.getFirstName(),
+                "lastName", auth.getLastName(),
+                "userName", auth.getUserName(),
+                "email", auth.getEmail(),
                 "message", "Login successful"
         ));
     }
@@ -169,15 +183,13 @@ public class AuthController {
     }
 
     @PostMapping("/google")
-    public ResponseEntity<ApiResponse<AuthResponse>> registerWithGoogle(@RequestBody GoogleUserDto googleUserDto) {
+    public ResponseEntity<Map<String, Object>> googleLogin(@RequestBody GoogleUserDto googleUserDto) {
         AuthResponse authResponse = authService.registerWithGoogle(googleUserDto);
-        return ResponseEntity.ok(new ApiResponse<>(
-                "Google registration successful",
-                authResponse,
-                HttpStatus.OK.value(),
-                LocalDateTime.now()
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("payload", authResponse); // <-- Wrap in 'payload'
+        return ResponseEntity.ok(response);
     }
+
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<Auth>>> getAllUser() {

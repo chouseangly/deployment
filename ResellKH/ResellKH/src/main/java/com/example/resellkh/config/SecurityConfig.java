@@ -62,6 +62,15 @@ public class SecurityConfig {
                                 "/api/v1/auths/google"
                         ).permitAll()
 
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/ratings/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/profile/**").permitAll()
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/getproductbyuserid/{userId}").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/upload").authenticated()
+                        .requestMatchers(HttpMethod.POST,"/api/v1/products/search-by-image").authenticated()
+                        .requestMatchers(HttpMethod.POST,"/api/v1/favourites").authenticated()
+
 
                         .requestMatchers(
                                 "/swagger-ui/**",

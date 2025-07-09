@@ -65,33 +65,61 @@ public class UserProfileServiceImpl implements UserProfileService {
 
         return userProfileRepo.getProfileByUserId(userId);
     }
-
     @Override
     public UserProfile updateUserProfileWithImage(Long userId, String gender, String phoneNumber,
-                                                  LocalDate birthday, String address,
+                                                  LocalDate birthday, String address, String telegramUrl,
+                                                  String slogan, String userName, String firstName, String lastName,
                                                   MultipartFile profileImage, MultipartFile coverImage) throws IOException {
 
         UserProfile existing = userProfileRepo.getProfileByUserId(userId);
         if (existing == null) return null;
 
+        // Update fields if provided
+        if (gender != null && !gender.isEmpty()) existing.setGender(gender);
+        if (phoneNumber != null && !phoneNumber.isEmpty()) existing.setPhoneNumber(phoneNumber);
+        if (birthday != null) existing.setBirthday(birthday);
+        if (address != null && !address.isEmpty()) existing.setAddress(address);
+        if (telegramUrl != null && !telegramUrl.isEmpty()) existing.setTelegramUrl(telegramUrl);
+        if (slogan != null && !slogan.isEmpty()) existing.setSlogan(slogan);
+        if (userName != null && !userName.isEmpty()) existing.setUserName(userName);
+        if (firstName != null && !firstName.isEmpty()) existing.setFirstName(firstName);
+        if (lastName != null && !lastName.isEmpty()) existing.setLastName(lastName);
+
+        // Handle profile and cover image uploads
+        if (profileImage != null && !profileImage.isEmpty()) {
+            existing.setProfileImage(uploadFileToPinata(profileImage));
+        }
+        if (coverImage != null && !coverImage.isEmpty()) {
+            existing.setCoverImage(uploadFileToPinata(coverImage));
+        }
+
+        // Convert updated entity to request DTO
         UserProfileRequest request = new UserProfileRequest();
-        request.setUserId(userId);
-        request.setGender(gender);
-        request.setPhoneNumber(phoneNumber);
-        request.setBirthday(birthday);
-        request.setAddress(address);
+        request.setUserId(existing.getUserId());
+        request.setGender(existing.getGender());
+        request.setPhoneNumber(existing.getPhoneNumber());
+        request.setBirthday(existing.getBirthday());
+        request.setAddress(existing.getAddress());
+        request.setTelegramUrl(existing.getTelegramUrl());
+        request.setSlogan(existing.getSlogan());
+        request.setUserName(existing.getUserName());
+        request.setFirstName(existing.getFirstName());
+        request.setLastName(existing.getLastName());
+        request.setProfileImage(existing.getProfileImage());
+        request.setCoverImage(existing.getCoverImage());
 
-        request.setProfileImage((profileImage != null && !profileImage.isEmpty())
-                ? uploadFileToPinata(profileImage)
-                : existing.getProfileImage());
-
-        request.setCoverImage((coverImage != null && !coverImage.isEmpty())
-                ? uploadFileToPinata(coverImage)
-                : existing.getCoverImage());
 
         userProfileRepo.updateUserProfile(request);
+
+
         return userProfileRepo.getProfileByUserId(userId);
     }
+
+
+    private static UserProfile getUserProfile(UserProfile existing) {
+        return existing;
+    }
+
 
     @Override
     public List<UserProfile> getUserProfiles() {
@@ -139,5 +167,7 @@ public class UserProfileServiceImpl implements UserProfileService {
     public boolean existsByUserId(Long userId) {
         return userProfileRepo.existsByUserId(userId);
     }
+
+
 
 }

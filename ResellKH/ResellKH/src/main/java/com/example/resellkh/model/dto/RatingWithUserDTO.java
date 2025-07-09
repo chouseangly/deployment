@@ -6,14 +6,16 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+@Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Data
-public class RatingRequest {
+public class RatingWithUserDTO {
+    private int ratingId;
     private int ratedUserId;
     private int ratingUserId;
     private double score;
     private String comment;
     private LocalDateTime createdAt;
-
+    private String reviewerName;
+    private String reviewerAvatar;
 }

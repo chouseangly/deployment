@@ -57,12 +57,12 @@ public class FavouriteController {
         );
     }
 
-    @GetMapping("/{userId}")
-    public ResponseEntity<ApiResponse<List<Favourite>>> getFavoriteByUserId(@PathVariable Integer userId) {
-        List<Favourite> favourites = favouriteService.getFavouritesByUserId(userId);
-        String message = favourites == null || favourites.isEmpty()
+    @GetMapping("/with-products/{userId}")
+    public ResponseEntity<ApiResponse<List<Favourite>>> getFavouritesWithProductsByUserId(@PathVariable Integer userId) {
+        List<Favourite> favourites = favouriteService.getFavouritesWithProductsByUserId(userId);
+        String message = (favourites == null || favourites.isEmpty())
                 ? "No favourites found for user"
-                : "Get favourites by user ID successfully";
+                : "Get favourites with products by user ID successfully";
 
         return ResponseEntity.ok(
                 new ApiResponse<>(
@@ -73,6 +73,7 @@ public class FavouriteController {
                 )
         );
     }
+
 
     @GetMapping("/exists")
     public ResponseEntity<Boolean> check(@RequestParam Integer userId, @RequestParam Integer productId) {

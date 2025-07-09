@@ -34,15 +34,14 @@ public class FavouriteServiceImpl implements FavouriteService {
         favouriteRepo.removeFavourite(userId, productId);
         return list.get(0);
     }
-
-
-    @Override
-    public List<Favourite> getFavouritesByUserId(Integer userId) {
-        return favouriteRepo.getFavouritesByUserId(userId);
-    }
-
     @Override
     public boolean isFavourite(Integer userId, Integer productId) {
         return favouriteRepo.isFavourite(userId, productId);
     }
+
+    @Override
+    public List<Favourite> getFavouritesWithProductsByUserId(Integer userId) {
+        return favouriteRepo.getFavouritesWithProductByUserId(userId);
+    }
+
 }

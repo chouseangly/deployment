@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 public class ProductRequest {
     private String productName;
     private Long userId;
-    private String categoryName;
+    private Long mainCategoryId;
     private Double productPrice;
     private Double discountPercent;
     private String productStatus;
@@ -19,5 +19,6 @@ public class ProductRequest {
     private Double latitude;
     private Double longitude;
     private String condition;
+    private String telegramUrl;
 
 }

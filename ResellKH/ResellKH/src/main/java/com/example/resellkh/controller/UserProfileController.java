@@ -44,24 +44,32 @@ public class UserProfileController {
         }
     }
 
-    @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(path = "edit", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<UserProfile>> updateProfile(
             @RequestParam("userId") Long userId,
-            @RequestParam("gender") String gender,
-            @RequestParam("phoneNumber") String phoneNumber,
-            @RequestParam @DateTimeFormat(pattern = "MM/dd/yyyy") LocalDate birthday,
-            @RequestParam("address") String address,
+            @RequestParam(required = false) String gender,
+            @RequestParam(required = false) String phoneNumber,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate birthday,
+            @RequestParam(required = false) String address,
+            @RequestParam(required = false) String telegramUrl,
+            @RequestParam(required = false) String slogan,
+            @RequestParam(required = false) String userName,
+            @RequestParam(required = false) String firstName,
+            @RequestParam(required = false) String lastName,
             @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
             @RequestPart(value = "coverImage", required = false) MultipartFile coverImage
     ) {
         try {
-            UserProfile updated = profileService.updateUserProfileWithImage(userId, gender, phoneNumber, birthday, address, profileImage, coverImage);
+            UserProfile updated = profileService.updateUserProfileWithImage(
+                    userId, gender, phoneNumber, birthday, address, telegramUrl,
+                    slogan, userName, firstName, lastName, profileImage, coverImage);
             return ResponseEntity.ok(new ApiResponse<>("User profile updated successfully", updated, HttpStatus.OK.value(), LocalDateTime.now()));
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>("Failed to update image", null, HttpStatus.INTERNAL_SERVER_ERROR.value(), LocalDateTime.now()));
         }
     }
+
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<UserProfile>>> getUserProfiles() {

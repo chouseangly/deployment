@@ -10,6 +10,7 @@ import com.example.resellkh.repository.ProductRepo;
 import com.example.resellkh.service.ProductHistoryService;
 import com.example.resellkh.service.ProductService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -48,139 +49,168 @@ public class ProductServiceImpl implements ProductService {
     private String pinataSecretApiKey;
 
     private static final String PINATA_URL = "https://api.pinata.cloud/pinning/pinFileToIPFS";
-    private static final String PYTHON_VECTOR_URL ="https://regions-gray-colony-tsunami.trycloudflare.com/extract-vector";
+    private static final String PYTHON_VECTOR_URL = "https://regions-gray-colony-tsunami.trycloudflare.com/extract-vector";
 
+    @Transactional
     @Override
     public ProductWithFilesDto uploadProductWithCategoryName(ProductRequest request, MultipartFile[] files) {
-        if (files == null || files.length < 1) {
-            throw new IllegalArgumentException("You must upload at least 1 image/video file.");
+        try {
+            // Validate files
+            if (files == null || files.length < 1) {
+                throw new IllegalArgumentException("You must upload at least 1 image/video file.");
+            }
+
+            // Limit files to 5
+            MultipartFile[] limitedFiles = files.length > 5 ? Arrays.copyOfRange(files, 0, 5) : files;
+
+            // Create product and set properties
+            Product product = new Product();
+            // Copy non-reserved properties
+            BeanUtils.copyProperties(request, product);
+            // Explicitly set reserved keyword field and ensure it's not null
+            product.setCondition(request.getCondition() != null ? request.getCondition() : "new");
+            product.setCreatedAt(LocalDateTime.now());
+
+            // Set defaults for nullable fields
+            if (product.getDiscountPercent() == null) product.setDiscountPercent(0.0);
+            if (product.getProductStatus() == null) product.setProductStatus("available");
+            if (product.getDescription() == null) product.setDescription("");
+            if (product.getLocation() == null) product.setLocation("");
+            if (product.getLatitude() == null) product.setLatitude(0.0);
+            if (product.getLongitude() == null) product.setLongitude(0.0);
+            if (product.getTelegramUrl() == null) product.setTelegramUrl("");
+
+            // Insert product
+            productRepo.insertProduct(product);
+
+            // Verify insertion
+            if (product.getProductId() == null) {
+                throw new RuntimeException("Product insertion failed - no ID generated");
+            }
+
+            productHistoryService.recordHistory(product.getProductId().intValue(), "Product created");
+
+            // Process files
+            List<String> fileUrls = new ArrayList<>();
+            for (MultipartFile file : limitedFiles) {
+                String ipfsUrl = uploadFileToPinata(file);
+                ProductFile productFile = new ProductFile();
+                productFile.setProductId(product.getProductId());
+                productFile.setFileUrl(ipfsUrl);
+                fileRepo.insertProductFile(productFile);
+                fileUrls.add(ipfsUrl);
+            }
+
+            // Save embedding if files exist
+            if (!fileUrls.isEmpty()) {
+                saveEmbedding(product.getProductId(), fileUrls.get(0));
+            }
+
+            return getProductWithFilesById(product.getProductId());
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to upload product: " + e.getMessage(), e);
         }
-
-        MultipartFile[] limitedFiles = files.length > 5 ? Arrays.copyOfRange(files, 0, 5) : files;
-
-        Integer categoryId = productRepo.getCategoryIdByName(request.getCategoryName());
-        if (categoryId == null) {
-            throw new RuntimeException("Invalid category name: " + request.getCategoryName());
-        }
-
-        Product product = new Product();
-        BeanUtils.copyProperties(request, product);
-        product.setMainCategoryId(Long.valueOf(categoryId));
-        product.setCreatedAt(LocalDateTime.now());
-        productRepo.insertProduct(product);
-        productHistoryService.recordHistory(product.getProductId().intValue(), "Product created");
-
-        List<String> fileUrls = new ArrayList<>();
-        for (MultipartFile file : limitedFiles) {
-            String ipfsUrl = uploadFileToPinata(file);
-            ProductFile productFile = new ProductFile();
-            productFile.setProductId(product.getProductId());
-            productFile.setFileUrl(ipfsUrl);
-            fileRepo.insertProductFile(productFile);
-            fileUrls.add(ipfsUrl);
-        }
-
-        if (!fileUrls.isEmpty()) {
-            saveEmbedding(product.getProductId(), fileUrls.get(0));
-        }
-
-        return getProductWithFilesById(product.getProductId());
     }
 
     @Override
+    @Transactional
     public ProductWithFilesDto updateProduct(Long id, ProductRequest request, MultipartFile[] files) {
-        if (files == null || files.length < 1) {
-            throw new IllegalArgumentException("You must upload at least 1 image/video file.");
+        try {
+            Product existing = productRepo.findById(id);
+            if (existing == null) {
+                throw new RuntimeException("Product not found");
+            }
+
+            // Update only non-null fields
+            if (request.getProductName() != null) existing.setProductName(request.getProductName());
+            if (request.getUserId() != null) existing.setUserId(request.getUserId());
+            if (request.getMainCategoryId() != null) existing.setMainCategoryId(request.getMainCategoryId());
+            if (request.getProductPrice() != null) existing.setProductPrice(request.getProductPrice());
+            if (request.getDiscountPercent() != null) existing.setDiscountPercent(request.getDiscountPercent());
+            if (request.getProductStatus() != null) existing.setProductStatus(request.getProductStatus());
+            if (request.getDescription() != null) existing.setDescription(request.getDescription());
+            if (request.getLocation() != null) existing.setLocation(request.getLocation());
+            if (request.getLatitude() != null) existing.setLatitude(request.getLatitude());
+            if (request.getLongitude() != null) existing.setLongitude(request.getLongitude());
+            if (request.getCondition() != null) existing.setCondition(request.getCondition());
+            if (request.getTelegramUrl() != null) existing.setTelegramUrl(request.getTelegramUrl());
+
+            productRepo.updateProduct(existing);
+            productHistoryService.recordHistory(id.intValue(), "Product updated");
+
+            // Process files if provided
+            if (files != null && files.length > 0) {
+                fileRepo.deleteFilesByProductId(id);
+
+                MultipartFile[] limitedFiles = files.length > 5 ? Arrays.copyOfRange(files, 0, 5) : files;
+                List<String> fileUrls = new ArrayList<>();
+                for (MultipartFile file : limitedFiles) {
+                    String ipfsUrl = uploadFileToPinata(file);
+                    ProductFile productFile = new ProductFile();
+                    productFile.setProductId(id);
+                    productFile.setFileUrl(ipfsUrl);
+                    fileRepo.insertProductFile(productFile);
+                    fileUrls.add(ipfsUrl);
+                }
+
+                if (!fileUrls.isEmpty()) {
+                    saveEmbedding(id, fileUrls.get(0));
+                }
+            }
+
+            return getProductWithFilesById(id);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update product: " + e.getMessage(), e);
         }
-
-        MultipartFile[] limitedFiles = files.length > 5 ? Arrays.copyOfRange(files, 0, 5) : files;
-
-        Integer categoryId = productRepo.getCategoryIdByName(request.getCategoryName());
-        if (categoryId == null) {
-            throw new RuntimeException("Invalid category name: " + request.getCategoryName());
-        }
-
-        Product existing = productRepo.findById(id);
-        if (existing == null) return null;
-
-        Product updatedProduct = new Product();
-        BeanUtils.copyProperties(request, updatedProduct);
-        updatedProduct.setProductId(id);
-        updatedProduct.setMainCategoryId(Long.valueOf(categoryId));
-        updatedProduct.setCreatedAt(existing.getCreatedAt());
-        updatedProduct.setLatitude(request.getLatitude());
-        updatedProduct.setLongitude(request.getLongitude());
-        productRepo.updateProduct(updatedProduct);
-        productHistoryService.recordHistory(id.intValue(), "Product updated");
-
-        fileRepo.deleteFilesByProductId(id);
-
-        List<String> fileUrls = new ArrayList<>();
-        for (MultipartFile file : limitedFiles) {
-            String ipfsUrl = uploadFileToPinata(file);
-            ProductFile productFile = new ProductFile();
-            productFile.setProductId(id);
-            productFile.setFileUrl(ipfsUrl);
-            fileRepo.insertProductFile(productFile);
-            fileUrls.add(ipfsUrl);
-        }
-
-        if (!fileUrls.isEmpty()) {
-            saveEmbedding(id, fileUrls.get(0));
-        }
-
-        return getProductWithFilesById(id);
     }
 
     @Override
     public List<ProductWithFilesDto> searchByImageUrl(MultipartFile file) {
-        // Step 1: Upload file to Pinata
-        String ipfsUrl = uploadFileToPinata(file);
+        try {
+            // Step 1: Upload file to Pinata
+            String ipfsUrl = uploadFileToPinata(file);
 
-        // Step 2: Call vector API with full IPFS URL
-        List<Double> inputVector = callImageVectorAPI(ipfsUrl);
+            // Step 2: Call vector API with full IPFS URL
+            List<Double> inputVector = callImageVectorAPI(ipfsUrl);
 
-        // Step 3: Compare with existing vectors
-        List<ProductEmbeddingRepo.ProductEmbeddingRecord> all = productEmbeddingRepo.getAllEmbeddings();
-        List<ProductWithSimilarity> similarities = new ArrayList<>();
+            // Step 3: Compare with existing vectors
+            List<ProductEmbeddingRepo.ProductEmbeddingRecord> all = productEmbeddingRepo.getAllEmbeddings();
+            List<ProductWithSimilarity> similarities = new ArrayList<>();
 
-        for (ProductEmbeddingRepo.ProductEmbeddingRecord record : all) {
-            try {
-                List<Double> targetVector = new ObjectMapper().readValue(record.getVectorJson(), List.class);
-                double similarity = computeCosineSimilarity(inputVector, targetVector);
-                similarities.add(new ProductWithSimilarity(record.getProductId(), similarity));
-            } catch (IOException e) {
-                e.printStackTrace();
+            for (ProductEmbeddingRepo.ProductEmbeddingRecord record : all) {
+                try {
+                    List<Double> targetVector = new ObjectMapper().readValue(record.getVectorJson(), List.class);
+                    double similarity = computeCosineSimilarity(inputVector, targetVector);
+                    similarities.add(new ProductWithSimilarity(record.getProductId(), similarity));
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to parse vector JSON", e);
+                }
             }
+
+            return similarities.stream()
+                    .filter(sim -> sim.similarity > 0.7)
+                    .sorted((a, b) -> Double.compare(b.similarity, a.similarity))
+                    .map(sim -> getProductWithFilesById(sim.productId))
+                    .filter(Objects::nonNull)
+                    .limit(10)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to search by image: " + e.getMessage(), e);
         }
-
-        return similarities.stream()
-                .filter(sim -> sim.similarity > 0.7)
-                .sorted((a, b) -> Double.compare(b.similarity, a.similarity))
-                .map(sim -> getProductWithFilesById(sim.productId))
-                .filter(Objects::nonNull)
-                .limit(10)
-                .toList();
     }
-
-
 
     @Override
-    public List<ProductWithFilesDto> findNearbyProducts(double lat, double lng, double radiusKm) {
-        List<Product> all = productRepo.findAll();
-        List<ProductWithFilesDto> nearby = new ArrayList<>();
-
-        for (Product product : all) {
-            if (product.getLatitude() == 0 || product.getLongitude() == 0) continue;
-
-            double distance = haversine(lat, lng, product.getLatitude(), product.getLongitude());
-            if (distance <= radiusKm) {
-                nearby.add(mapToDto(product));
-            }
+    public List<ProductWithFilesDto> findNearbyProducts(double lat, double lng) {
+        try {
+            List<Product> all = productRepo.findNearbyProducts(lat, lng);
+            if (all.isEmpty()) return Collections.emptyList();
+            return all.stream().map(this::mapToDto).collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to find nearby products: " + e.getMessage(), e);
         }
-
-        return nearby;
     }
+
     private double haversine(double lat1, double lng1, double lat2, double lng2) {
         final int R = 6371; // Earth radius in km
         double dLat = Math.toRadians(lat2 - lat1);
@@ -194,20 +224,17 @@ public class ProductServiceImpl implements ProductService {
         return R * c;
     }
 
-
     private record ProductWithSimilarity(Long productId, double similarity) {}
 
-
     private void saveEmbedding(Long productId, String imageUrl) {
-        List<Double> vector = callImageVectorAPI(imageUrl);
         try {
+            List<Double> vector = callImageVectorAPI(imageUrl);
             String vectorJson = new ObjectMapper().writeValueAsString(vector);
             productEmbeddingRepo.insertEmbedding(productId, vectorJson);
         } catch (Exception e) {
             throw new RuntimeException("Failed to save embedding: " + e.getMessage(), e);
         }
     }
-
 
     private List<Double> callImageVectorAPI(String imageUrl) {
         try {
@@ -237,7 +264,6 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
-
     private double computeCosineSimilarity(List<Double> a, List<Double> b) {
         if (a.size() != b.size()) return 0;
         double dot = 0, normA = 0, normB = 0;
@@ -249,30 +275,41 @@ public class ProductServiceImpl implements ProductService {
         return (normA == 0 || normB == 0) ? 0 : dot / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
-
-
     @Override
     public ProductWithFilesDto getProductWithFilesById(Long id) {
-        Product product = productRepo.findById(id);
-        return (product == null) ? null : mapToDto(product);
+        try {
+            Product product = productRepo.findById(id);
+            return (product == null) ? null : mapToDto(product);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get product by ID: " + e.getMessage(), e);
+        }
     }
 
     @Override
     public List<ProductWithFilesDto> getAllProductsWithFiles() {
-        return productRepo.findAll().stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
+        try {
+            return productRepo.findAll().stream()
+                    .map(this::mapToDto)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get all products: " + e.getMessage(), e);
+        }
     }
 
-    public ProductWithFilesDto deleteProductAndReturnDto(Long productId) {
-        Product product = productRepo.findById(productId);
-        if (product == null) return null;
 
-        ProductWithFilesDto dto = mapToDto(product);
-        productHistoryService.recordHistory(productId.intValue(), "Product deleted");
-        fileRepo.deleteFilesByProductId(productId);
-        productRepo.deleteProduct(productId);
-        return dto;
+    public ProductWithFilesDto deleteProductAndReturnDto(Long productId) {
+        try {
+            Product product = productRepo.findById(productId);
+            if (product == null) return null;
+
+            ProductWithFilesDto dto = mapToDto(product);
+            productHistoryService.recordHistory(productId.intValue(), "Product deleted");
+            fileRepo.deleteFilesByProductId(productId);
+            productRepo.deleteProduct(productId);
+            return dto;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete product: " + e.getMessage(), e);
+        }
     }
 
     private ProductWithFilesDto mapToDto(Product product) {
@@ -305,6 +342,34 @@ public class ProductServiceImpl implements ProductService {
             }
         } catch (IOException e) {
             throw new RuntimeException("Failed to upload file to Pinata", e);
+        }
+    }
+
+    @Override
+    public List<ProductWithFilesDto> getProductsByUserId(Long userId) {
+        try {
+            List<ProductWithFilesDto> products = productRepo.findByUserId(userId);
+
+            products.forEach(product -> {
+                String categoryName = productRepo.getCategoryNameById(
+                        product.getMainCategoryId() != null ?
+                                product.getMainCategoryId().intValue() : 0);
+                product.setCategoryName(categoryName != null ? categoryName : "Unknown");
+            });
+
+            return products;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get products by user ID: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<ProductWithFilesDto> getProductsByCategoryId(Integer categoryId) {
+        try {
+            List<Product> product = productRepo.findByCategoryId(categoryId);
+            return product.stream().map(this::mapToDto).collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get products by category ID: " + e.getMessage(), e);
         }
     }
 }

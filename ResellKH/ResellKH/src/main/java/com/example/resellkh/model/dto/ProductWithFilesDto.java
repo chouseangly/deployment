@@ -22,6 +22,7 @@ public class ProductWithFilesDto {
     private String productStatus;
     private String description;
     private String location;
+    private String telegramUrl;
     private String condition;
     private double Latitude;
     private double Longitude;

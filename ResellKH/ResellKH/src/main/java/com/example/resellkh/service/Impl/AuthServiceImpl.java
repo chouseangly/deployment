@@ -3,9 +3,12 @@ package com.example.resellkh.service.Impl;
 import com.example.resellkh.jwt.JwtService;
 import com.example.resellkh.model.dto.AuthResponse;
 import com.example.resellkh.model.dto.GoogleUserDto;
+import com.example.resellkh.model.entity.Auth;
+import com.example.resellkh.model.entity.UserProfile;
+import com.example.resellkh.repository.UserProfileRepo;
 import com.example.resellkh.repository.authRepo;
 import com.example.resellkh.service.AuthService;
-import com.example.resellkh.model.entity.Auth;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -22,6 +25,7 @@ import java.util.Optional;
 public class AuthServiceImpl implements AuthService {
 
     private final authRepo authRepo;
+    private final UserProfileRepo userProfileRepo;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
@@ -56,13 +60,30 @@ public class AuthServiceImpl implements AuthService {
         return authRepo.findByEmail(email);
     }
 
+    @Override
+    @Transactional
     public AuthResponse registerWithGoogle(GoogleUserDto googleUserDto) {
         Optional<Auth> existing = authRepo.findByEmailOptional(googleUserDto.getEmail());
 
         Auth auth;
         if (existing.isPresent()) {
             auth = existing.get();
+
+            // If user profile doesn't exist, create a new minimal profile
+            UserProfile existingProfile = userProfileRepo.getProfileByUserId(Long.valueOf(auth.getUserId()));
+            if (existingProfile == null) {
+                UserProfile profile = new UserProfile();
+                profile.setUserId(Long.valueOf(auth.getUserId()));
+                profile.setFirstName(auth.getFirstName());
+                profile.setLastName(auth.getLastName());
+                profile.setUserName(auth.getUserName());
+
+                // Do not set profileImage to avoid overwriting future uploads
+                userProfileRepo.createUserProfileAfterVerify(profile);
+            }
+
         } else {
+            // New user registration
             auth = new Auth();
             auth.setFirstName(googleUserDto.getFirstName());
             auth.setLastName(googleUserDto.getLastName());
@@ -73,13 +94,29 @@ public class AuthServiceImpl implements AuthService {
             auth.setEnabled(true);
             auth.setCreatedAt(LocalDateTime.now());
 
+            // Insert and reload to get userId
             authRepo.insertUser(auth);
-
-            // After insert, fetch user to get the generated ID
             auth = authRepo.findByEmail(googleUserDto.getEmail());
+
+            // Create new profile with Google profile image
+            UserProfile profile = new UserProfile();
+            profile.setUserId(Long.valueOf(auth.getUserId()));
+            profile.setFirstName(auth.getFirstName());
+            profile.setLastName(auth.getLastName());
+            profile.setUserName(auth.getUserName());
+            profile.setProfileImage(googleUserDto.getPicture());
+
+            userProfileRepo.createUserProfileAfterVerify(profile);
         }
 
+        // Generate JWT
         String token = jwtService.generateToken(auth);
+
+        // Load profile image to return
+        UserProfile profile = userProfileRepo.getProfileByUserId(Long.valueOf(auth.getUserId()));
+        String profileImage = (profile != null && profile.getProfileImage() != null)
+                ? profile.getProfileImage()
+                : googleUserDto.getPicture();
 
         return new AuthResponse(
                 token,
@@ -87,15 +124,13 @@ public class AuthServiceImpl implements AuthService {
                 auth.getUserId(),
                 auth.getEmail(),
                 auth.getFirstName(),
-                auth.getLastName()
+                auth.getLastName(),
+                profileImage
         );
     }
-
-
 
     @Override
     public List<Auth> getAllUser() {
         return authRepo.getAllUser();
     }
-
 }

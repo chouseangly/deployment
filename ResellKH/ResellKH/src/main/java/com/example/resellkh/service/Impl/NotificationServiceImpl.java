@@ -29,4 +29,19 @@ public class NotificationServiceImpl implements NotificationService {
         List<Notification> notifications = notificationRepo.getNotificationsByUserId(userId);
         return notifications.isEmpty() ? null : notifications.get(0);
     }
+
+    @Override
+    public List<Notification> getAllNotificationsByUserId(int userId) {
+        return notificationRepo.getAllNotificationsByUserId(userId);
+    }
+
+    @Override
+    public void markNotificationAsRead(int userId, int id) {
+        notificationRepo.markNotificationAsRead(userId, id);
+    }
+
+    @Override
+    public void createNotificationWithType(Notification notification) {
+        notificationRepo.createNotificationWithType(notification);
+    }
 }

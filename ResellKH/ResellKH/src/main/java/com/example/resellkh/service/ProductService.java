@@ -14,5 +14,8 @@ public interface ProductService {
 
     List<ProductWithFilesDto> searchByImageUrl(MultipartFile file);
 
-    List<ProductWithFilesDto> findNearbyProducts(double lat, double lng, double  radiusKm);
+    List<ProductWithFilesDto> findNearbyProducts(double lat, double lng);
+    List<ProductWithFilesDto> getProductsByUserId(Long userId);
+    List<ProductWithFilesDto> getProductsByCategoryId(Integer categoryId);
+
 }

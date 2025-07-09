@@ -15,7 +15,7 @@ public class UserProfile {
     private String profileImage;
     private String coverImage;
     private LocalDate birthday;
-    private String Address;
+    private String address;
     private String telegramUrl;
     private String slogan;
     private String userName;

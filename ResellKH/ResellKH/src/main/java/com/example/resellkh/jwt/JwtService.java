@@ -13,7 +13,7 @@ import java.util.function.Function;
 @Component
 public class JwtService {
     private static final String SECRET = "6e606a3b504a338d8faa0dcd048eb8c877f49e24334ae3b81060228d59860278";
-    private static final long JWT_EXPIRATION = 24 * 60 * 60 * 1000;
+    private static final long JWT_EXPIRATION = 5*24 * 60 * 60 * 1000;
 
     private Key getSignKey() {
         return Keys.hmacShaKeyFor(SECRET.getBytes());
@@ -54,6 +54,13 @@ public class JwtService {
         final Claims claims = Jwts.parserBuilder().setSigningKey(getSignKey()).build().parseClaimsJws(token).getBody();
         return claimsResolver.apply(claims);
     }
+    public Long extractUserId(String token) {
+        return extractClaim(token, claims -> claims.get("userId", Long.class));
+    }
+
+
+
+
 
     private boolean isTokenExpired(String token) {
         return extractExpirationDate(token).before(new Date());

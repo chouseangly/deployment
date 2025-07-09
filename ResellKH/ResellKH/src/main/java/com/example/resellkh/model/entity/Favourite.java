@@ -11,5 +11,6 @@ public class Favourite {
     private Long favouriteId;
     private Integer userId;
     private Integer productId;
+    private Product product;
     private LocalDateTime createdAt;
 }
