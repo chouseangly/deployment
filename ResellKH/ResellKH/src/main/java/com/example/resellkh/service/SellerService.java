@@ -8,5 +8,8 @@ public interface SellerService {
 
     Seller createSeller(SellerRequest request);
 
-    Seller getSellerBySellerId(Long sellerId);
+
+    Seller updateSeller(Long sellerId, SellerRequest request);
+
+    Seller getSellerByUserId(Long userId);
 }

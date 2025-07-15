@@ -21,5 +21,6 @@ public class UserProfile {
     private String userName;
     private String firstName;
     private String lastName;
+    private boolean isSeller;
 }
 

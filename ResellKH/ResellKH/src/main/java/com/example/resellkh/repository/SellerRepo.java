@@ -49,9 +49,27 @@ public interface SellerRepo {
             @Result(property = "updatedAt", column = "updated_at")
     })
     Seller findById(Long sellerId);
+
+
+    @Update("""
+        UPDATE seller SET
+            business_name = #{businessName},
+            business_type = #{businessType},
+            business_address = #{businessAddress},
+            business_description = #{businessDescription},
+            expected_revenue = #{expectedRevenue},
+            bank_name = #{bankName},
+            bank_account_name = #{bankAccountName},
+            bank_account_number = #{bankAccountNumber}
+        WHERE seller_id = #{sellerId}
+    """)
+    int updateSeller(Seller seller);
+
+    @Select("SELECT * FROM seller WHERE user_id = #{userId}")
+    @ResultMap("sellerResultMap")
+    Seller findByUserId(Long userId);
     @Select("""
     select * from seller where seller_id = #{sellerId}
-    
 """)
     @ResultMap("sellerResultMap")
     Seller getSellerBySellerId(Long sellerId);

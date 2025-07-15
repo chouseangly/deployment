@@ -44,6 +44,8 @@ CREATE TABLE user_profile (
                               cover_image TEXT,
                               address TEXT
 );
+ALTER TABLE user_profile
+    ADD COLUMN is_seller BOOLEAN DEFAULT FALSE;
 UPDATE user_profile SET first_name = 'loun', last_name = 'siven' WHERE user_id = 2;
 --Add New Column
 ALTER TABLE user_profile ADD COLUMN telegram_url VARCHAR(255),
@@ -304,7 +306,7 @@ CREATE TABLE payment_transactions (
                                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-
+truncate table seller cascade ;
 
 
 

@@ -46,12 +46,14 @@ public interface UserProfileRepo {
     """)
     void updateUserProfile(UserProfileRequest request);
 
+    // In chouseangly/deployment/deployment-main/ResellKH/ResellKH/src/main/java/com/example/resellkh/repository/UserProfileRepo.java
+
     @Select("""
-        SELECT profile_id, user_id, gender, phone_number, profile_image, cover_image, birthday, address,
-               telegram_url, slogan, user_name, first_name, last_name
-        FROM user_profile
-        WHERE user_id = #{userId}
-    """)
+    SELECT profile_id, user_id, gender, phone_number, profile_image, cover_image, birthday, address,
+           telegram_url, slogan, user_name, first_name, last_name, is_seller
+    FROM user_profile
+    WHERE user_id = #{userId}
+""")
     @Results({
             @Result(property = "profileId", column = "profile_id"),
             @Result(property = "userId", column = "user_id"),
@@ -65,7 +67,9 @@ public interface UserProfileRepo {
             @Result(property = "slogan", column = "slogan"),
             @Result(property = "userName", column = "user_name"),
             @Result(property = "firstName", column = "first_name"),
-            @Result(property = "lastName", column = "last_name")
+            @Result(property = "lastName", column = "last_name"),
+            // Add this new mapping
+            @Result(property = "isSeller", column = "is_seller")
     })
     UserProfile getProfileByUserId(Long userId);
 
@@ -92,4 +96,6 @@ public interface UserProfileRepo {
 
     @Select("SELECT COUNT(*) > 0 FROM user_profile WHERE user_id = #{userId}")
     boolean existsByUserId(@Param("userId") Long userId);
+    @Update("UPDATE user_profile SET is_seller = #{isSeller} WHERE user_id = #{userId}")
+    void updateIsSeller(@Param("userId") Long userId, @Param("isSeller") boolean isSeller);
 }
