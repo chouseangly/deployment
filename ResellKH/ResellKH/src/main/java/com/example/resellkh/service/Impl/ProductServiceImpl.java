@@ -4,6 +4,9 @@ import com.example.resellkh.model.dto.ProductFile;
 import com.example.resellkh.model.dto.ProductRequest;
 import com.example.resellkh.model.dto.ProductWithFilesDto;
 import com.example.resellkh.model.entity.Product;
+import com.example.resellkh.model.entity.ProductDraft;
+import com.example.resellkh.model.entity.ProductDraftFile;
+import com.example.resellkh.repository.DraftProductFileRepo;
 import com.example.resellkh.repository.ProductEmbeddingRepo;
 import com.example.resellkh.repository.ProductFileRepo;
 import com.example.resellkh.repository.ProductRepo;
@@ -41,7 +44,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductHistoryService productHistoryService;
     private final ProductEmbeddingRepo productEmbeddingRepo;
     private final RestTemplate restTemplate;
-
+    private final DraftProductFileRepo draftProductFileRepo;
     @Value("${pinata.api.key}")
     private String pinataApiKey;
 
@@ -73,7 +76,7 @@ public class ProductServiceImpl implements ProductService {
 
             // Set defaults for nullable fields
             if (product.getDiscountPercent() == null) product.setDiscountPercent(0.0);
-            if (product.getProductStatus() == null) product.setProductStatus("available");
+            if (product.getProductStatus() == null) product.setProductStatus("");
             if (product.getDescription() == null) product.setDescription("");
             if (product.getLocation() == null) product.setLocation("");
             if (product.getLatitude() == null) product.setLatitude(0.0);
@@ -189,7 +192,7 @@ public class ProductServiceImpl implements ProductService {
             }
 
             return similarities.stream()
-                    .filter(sim -> sim.similarity > 0.7)
+                    .filter(sim -> sim.similarity > 0.9)
                     .sorted((a, b) -> Double.compare(b.similarity, a.similarity))
                     .map(sim -> getProductWithFilesById(sim.productId))
                     .filter(Objects::nonNull)
@@ -211,18 +214,7 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
-    private double haversine(double lat1, double lng1, double lat2, double lng2) {
-        final int R = 6371; // Earth radius in km
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLng = Math.toRadians(lng2 - lng1);
 
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    }
 
     private record ProductWithSimilarity(Long productId, double similarity) {}
 
@@ -230,7 +222,14 @@ public class ProductServiceImpl implements ProductService {
         try {
             List<Double> vector = callImageVectorAPI(imageUrl);
             String vectorJson = new ObjectMapper().writeValueAsString(vector);
-            productEmbeddingRepo.insertEmbedding(productId, vectorJson);
+            int count = productEmbeddingRepo.countByProductId(productId);
+
+            if (count > 0) {
+                productEmbeddingRepo.updateEmbedding(productId, vectorJson);
+            } else {
+                productEmbeddingRepo.insertEmbedding(productId, vectorJson);
+            }
+
         } catch (Exception e) {
             throw new RuntimeException("Failed to save embedding: " + e.getMessage(), e);
         }
@@ -370,6 +369,396 @@ public class ProductServiceImpl implements ProductService {
             return product.stream().map(this::mapToDto).collect(Collectors.toList());
         } catch (Exception e) {
             throw new RuntimeException("Failed to get products by category ID: " + e.getMessage(), e);
+        }
+    }
+
+
+
+    @Override
+    public List<ProductWithFilesDto> getAllProductsByStatus(String status) {
+        return productRepo.findAllByStatus(status);
+    }
+
+    @Transactional
+    @Override
+    public ProductDraft saveDraftProduct(String productName, Long userId, Long mainCategoryId,
+                                                Double productPrice, Double discountPercent, String description,
+                                                String location, Double latitude, Double longitude, String condition,
+                                                String telegramUrl, MultipartFile[] files) {
+        ProductDraft draft = new ProductDraft();
+        draft.setProductName(productName);
+        draft.setUserId(userId);
+        draft.setMainCategoryId(mainCategoryId);
+        draft.setProductPrice(productPrice);
+        draft.setDiscountPercent(discountPercent != null ? discountPercent : 0.0);
+        draft.setProductStatus("DRAFT");  // consistent uppercase draft status
+        draft.setDescription(description != null ? description : "");
+        draft.setLocation(location != null ? location : "");
+        draft.setLatitude(latitude != null ? latitude : 0.0);
+        draft.setLongitude(longitude != null ? longitude : 0.0);
+        draft.setCondition(condition != null ? condition : "new");
+        draft.setTelegramUrl(telegramUrl != null ? telegramUrl : "");
+        draft.setCreatedAt(LocalDateTime.now());
+        draft.setUpdatedAt(LocalDateTime.now());
+
+        draftProductFileRepo.insertDraftProduct(draft);
+
+        saveFilesForDraft(draft.getDraftId(), files);
+
+        return getDraftById(draft.getDraftId());
+    }
+
+    @Transactional
+    @Override
+    public Object updateDraftProduct(Long draftId, String productName, Long mainCategoryId,
+                                     Double productPrice, Double discountPercent, String description,
+                                     String location, Double latitude, Double longitude, String condition,
+                                     String telegramUrl, String productStatus, MultipartFile[] files) {
+
+        // 1. Find existing draft
+        ProductDraft existing = draftProductFileRepo.findById(draftId);
+        if (existing == null) {
+            return null;
+        }
+
+        // 2. Update all fields
+        if (productName != null) existing.setProductName(productName);
+        if (mainCategoryId != null) existing.setMainCategoryId(mainCategoryId);
+        if (productPrice != null) existing.setProductPrice(productPrice);
+        if (discountPercent != null) existing.setDiscountPercent(discountPercent);
+        if (description != null) existing.setDescription(description);
+        if (location != null) existing.setLocation(location);
+        if (latitude != null) existing.setLatitude(latitude);
+        if (longitude != null) existing.setLongitude(longitude);
+        if (condition != null) existing.setCondition(condition);
+        if (telegramUrl != null) existing.setTelegramUrl(telegramUrl);
+
+        // 3. Handle status update
+        if (productStatus != null) {
+            existing.setProductStatus(productStatus.trim().toUpperCase());
+        }
+
+        existing.setUpdatedAt(LocalDateTime.now());
+
+        // 4. Check if we should publish
+        if ("ON SALE".equals(existing.getProductStatus())) {
+            // Create new product
+            Product product = new Product();
+            BeanUtils.copyProperties(existing, product);
+            product.setCreatedAt(LocalDateTime.now());
+
+            // Set defaults
+            if (product.getDiscountPercent() == null) product.setDiscountPercent(0.0);
+            if (product.getDescription() == null) product.setDescription("");
+            if (product.getLocation() == null) product.setLocation("");
+            if (product.getLatitude() == null) product.setLatitude(0.0);
+            if (product.getLongitude() == null) product.setLongitude(0.0);
+            if (product.getTelegramUrl() == null) product.setTelegramUrl("");
+            if (product.getCondition() == null) product.setCondition("NEW");
+
+            // Insert product
+            productRepo.insertProduct(product);
+
+            // Transfer files
+            List<ProductDraftFile> draftFiles = draftProductFileRepo.findByDraftId(draftId);
+            draftFiles.forEach(draftFile -> {
+                ProductFile productFile = new ProductFile();
+                productFile.setProductId(product.getProductId());
+                productFile.setFileUrl(draftFile.getUrl());
+                fileRepo.insertProductFile(productFile);
+            });
+
+            // Save embedding
+            if (!draftFiles.isEmpty()) {
+                saveEmbedding(product.getProductId(), draftFiles.get(0).getUrl());
+            }
+
+            // Delete draft
+            draftProductFileRepo.deleteDraftFilesByDraftId(draftId);
+            draftProductFileRepo.deleteDraftProduct(draftId);
+
+            // Return the new product DTO
+            return mapToProductDto(product);
+        }
+
+        // 5. Regular draft update
+        draftProductFileRepo.updateDraftProduct(existing);
+
+        if (files != null && files.length > 0) {
+            draftProductFileRepo.deleteDraftFilesByDraftId(draftId);
+            saveFilesForDraft(draftId, files);
+        }
+
+        return getDraftById(draftId);
+    }
+
+    private ProductWithFilesDto mapToProductDto(Product product) {
+        ProductWithFilesDto dto = new ProductWithFilesDto();
+        BeanUtils.copyProperties(product, dto);
+
+        // Set file URLs
+        dto.setFileUrls(fileRepo.findByProductId(product.getProductId())
+                .stream()
+                .map(ProductFile::getFileUrl)
+                .collect(Collectors.toList()));
+
+        // Set category name
+        String categoryName = productRepo.getCategoryNameById(
+                product.getMainCategoryId() != null ?
+                        product.getMainCategoryId().intValue() : 0);
+        dto.setCategoryName(categoryName != null ? categoryName : "Unknown");
+
+        return dto;
+    }
+    @Override
+    public ProductDraft getDraftById(Long draftId) {
+        ProductDraft draft = draftProductFileRepo.findById(draftId);
+        if (draft == null) return null;
+
+        ProductDraft dto = new ProductDraft();
+        BeanUtils.copyProperties(draft, dto);
+
+        List<ProductDraftFile> files = draftProductFileRepo.findByDraftId(draftId);  // fixed method name: findByDraftId
+        dto.setFileUrls(files.stream().map(ProductDraftFile::getUrl).collect(Collectors.toList()));
+
+        String categoryName = productRepo.getCategoryNameById(
+                draft.getMainCategoryId() != null ? draft.getMainCategoryId().intValue() : 0);
+        dto.setCategoryName(categoryName != null ? categoryName : "Unknown");
+
+        return dto;
+    }
+
+    @Transactional
+    @Override
+    public ProductWithFilesDto updateDraftProductByUserId(Long userId, String productName, Long mainCategoryId,
+                                                          Double productPrice, Double discountPercent, String description,
+                                                          String location, Double latitude, Double longitude,
+                                                          String condition, String telegramUrl, MultipartFile[] files) {
+        // Find drafts by userId
+        List<ProductDraft> drafts = draftProductFileRepo.findByUserId(userId);
+        if (drafts == null || drafts.isEmpty()) {
+            return null;  // no draft found
+        }
+
+        ProductDraft draft = drafts.get(0); // update the first draft (you can adjust logic)
+
+        // Update draft fields if not null
+        if (productName != null) draft.setProductName(productName);
+        if (mainCategoryId != null) draft.setMainCategoryId(mainCategoryId);
+        if (productPrice != null) draft.setProductPrice(productPrice);
+        if (discountPercent != null) draft.setDiscountPercent(discountPercent);
+        if (description != null) draft.setDescription(description);
+        if (location != null) draft.setLocation(location);
+        if (latitude != null) draft.setLatitude(latitude);
+        if (longitude != null) draft.setLongitude(longitude);
+        if (condition != null) draft.setCondition(condition);
+        if (telegramUrl != null) draft.setTelegramUrl(telegramUrl);
+
+        draft.setUpdatedAt(LocalDateTime.now());
+        draftProductFileRepo.updateDraftProduct(draft);
+
+        // Update draft files if any
+        if (files != null && files.length > 0) {
+            draftProductFileRepo.deleteDraftFilesByDraftId(draft.getDraftId()); // Also fixed here for consistency
+            MultipartFile[] limitedFiles = files.length > 5 ? Arrays.copyOfRange(files, 0, 5) : files;
+            for (MultipartFile file : limitedFiles) {
+                String url = uploadFileToPinata(file);
+                ProductDraftFile draftFile = new ProductDraftFile();
+                draftFile.setDraftId(draft.getDraftId());
+                draftFile.setUrl(url);
+                draftProductFileRepo.insertDraftProductFile(draftFile);
+            }
+        }
+
+        // Check if product exists linked to this draft (implement findByDraftId in ProductRepo)
+        Product existingProduct = productRepo.findByDraftId(draft.getDraftId());
+
+        if (existingProduct == null) {
+            // Create new product from draft
+            Product newProduct = new Product();
+            newProduct.setProductName(draft.getProductName());
+            newProduct.setUserId(draft.getUserId());
+            newProduct.setMainCategoryId(draft.getMainCategoryId());
+            newProduct.setProductPrice(draft.getProductPrice());
+            newProduct.setDiscountPercent(draft.getDiscountPercent());
+            newProduct.setProductStatus("On sale");  // Set status to "On sale"
+            newProduct.setDescription(draft.getDescription());
+            newProduct.setLocation(draft.getLocation());
+            newProduct.setLatitude(draft.getLatitude());
+            newProduct.setLongitude(draft.getLongitude());
+            newProduct.setCondition(draft.getCondition());
+            newProduct.setTelegramUrl(draft.getTelegramUrl());
+            newProduct.setCreatedAt(draft.getCreatedAt());
+            newProduct.setUpdatedAt(LocalDateTime.now());
+
+            productRepo.insertProduct(newProduct);
+
+            // Insert product files from draft files
+            List<ProductDraftFile> draftFiles = draftProductFileRepo.findByDraftId(draft.getDraftId());
+            for (ProductDraftFile draftFile : draftFiles) {
+                ProductFile productFile = new ProductFile();
+                productFile.setProductId(newProduct.getProductId());
+                productFile.setFileUrl(draftFile.getUrl());
+                fileRepo.insertProductFile(productFile);
+            }
+
+            // Delete draft files and draft itself after publishing
+            draftProductFileRepo.deleteDraftFilesByDraftId(draft.getDraftId()); // Also fixed here
+            draftProductFileRepo.deleteDraftProduct(draft.getDraftId());
+
+            return getProductWithFilesById(newProduct.getProductId());
+
+        } else {
+            // Update existing product from draft info
+            existingProduct.setProductName(draft.getProductName());
+            existingProduct.setMainCategoryId(draft.getMainCategoryId());
+            existingProduct.setProductPrice(draft.getProductPrice());
+            existingProduct.setDiscountPercent(draft.getDiscountPercent());
+            existingProduct.setProductStatus("On sale");  // Set status to "On sale"
+            existingProduct.setDescription(draft.getDescription());
+            existingProduct.setLocation(draft.getLocation());
+            existingProduct.setLatitude(draft.getLatitude());
+            existingProduct.setLongitude(draft.getLongitude());
+            existingProduct.setCondition(draft.getCondition());
+            existingProduct.setTelegramUrl(draft.getTelegramUrl());
+            existingProduct.setUpdatedAt(draft.getUpdatedAt());
+
+            productRepo.updateProduct(existingProduct);
+
+            // Update product files
+            if (files != null && files.length > 0) {
+                fileRepo.deleteFilesByProductId(existingProduct.getProductId());
+                MultipartFile[] limitedFiles = files.length > 5 ? Arrays.copyOfRange(files, 0, 5) : files;
+                for (MultipartFile file : limitedFiles) {
+                    String url = uploadFileToPinata(file);
+                    ProductFile productFile = new ProductFile();
+                    productFile.setProductId(existingProduct.getProductId());
+                    productFile.setFileUrl(url);
+                    fileRepo.insertProductFile(productFile);
+                }
+            } else {
+                // Sync draft files to product files if no new files uploaded
+                List<ProductDraftFile> draftFiles = draftProductFileRepo.findByDraftId(draft.getDraftId());
+                fileRepo.deleteFilesByProductId(existingProduct.getProductId());
+                for (ProductDraftFile draftFile : draftFiles) {
+                    ProductFile productFile = new ProductFile();
+                    productFile.setProductId(existingProduct.getProductId());
+                    productFile.setFileUrl(draftFile.getUrl());
+                    fileRepo.insertProductFile(productFile);
+                }
+            }
+
+            // Delete draft files and draft itself after publishing
+            draftProductFileRepo.deleteDraftFilesByDraftId(draft.getDraftId()); // Also fixed here
+            draftProductFileRepo.deleteDraftProduct(draft.getDraftId());
+
+            return getProductWithFilesById(existingProduct.getProductId());
+        }
+    }
+
+    @Transactional
+    @Override
+    public boolean deleteDraftByUserIdAndDraftId(Long userId, Long draftId) {
+        ProductDraft draft = draftProductFileRepo.findById(draftId);
+        if (draft == null || !draft.getUserId().equals(userId)) {
+            return false;  // Not found or not authorized
+        }
+
+        // Delete draft files first
+        draftProductFileRepo.deleteDraftFilesByDraftId(draftId);
+
+        // Delete the draft itself
+        draftProductFileRepo.deleteDraftByDraftIdAndUserId(draftId, userId);
+
+        return true;
+    }
+
+    @Transactional
+    @Override
+    public List<ProductDraft> getDraftsByUser(Long userId) {
+        List<ProductDraft> drafts = draftProductFileRepo.findByUserId(userId);
+        if (drafts == null) return Collections.emptyList();
+
+        List<ProductDraft> dtos = new ArrayList<>();
+        for (ProductDraft draft : drafts) {
+            ProductDraft dto = new ProductDraft();
+            BeanUtils.copyProperties(draft, dto);
+
+            List<ProductDraftFile> files = draftProductFileRepo.findByDraftId(draft.getDraftId());
+            dto.setFileUrls(files.stream().map(ProductDraftFile::getUrl).collect(Collectors.toList()));
+
+            String categoryName = productRepo.getCategoryNameById(
+                    draft.getMainCategoryId() != null ? draft.getMainCategoryId().intValue() : 0);
+            dto.setCategoryName(categoryName != null ? categoryName : "Unknown");
+
+            dtos.add(dto);
+        }
+        return dtos;
+    }
+
+    @Transactional
+    @Override
+    public ProductDraft publishDraftProduct(Long draftId) {
+        ProductDraft draft = draftProductFileRepo.findById(draftId);
+        if (draft == null) return null;
+
+        // Create a new Product from the draft
+        Product product = new Product();
+        BeanUtils.copyProperties(draft, product); // Copy common properties
+        product.setProductId(null); // Ensure new ID is generated for the new product
+        product.setProductStatus("On sale"); // Set final status for published product
+        product.setCreatedAt(draft.getCreatedAt()); // Keep original draft creation time
+        product.setUpdatedAt(LocalDateTime.now()); // Set updated time to now (publication time)
+
+        // Handle nullable fields (ensure default values if source ProductDraft has nulls)
+        if (product.getDiscountPercent() == null) product.setDiscountPercent(0.0);
+        if (product.getDescription() == null) product.setDescription("");
+        if (product.getLocation() == null) product.setLocation("");
+        if (product.getLatitude() == null) product.setLatitude(0.0);
+        if (product.getLongitude() == null) product.setLongitude(0.0);
+        if (product.getTelegramUrl() == null) product.setTelegramUrl("");
+        if (product.getCondition() == null) product.setCondition("new");
+
+        productRepo.insertProduct(product); // Insert product, new productId will be set
+
+        // Record product history
+        productHistoryService.recordHistory(product.getProductId().intValue(), "Product published from draft");
+
+        // Copy files from draft_images to product_images
+        List<ProductDraftFile> draftFiles = draftProductFileRepo.findByDraftId(draftId);
+        List<String> publishedFileUrls = new ArrayList<>();
+        if (draftFiles != null && !draftFiles.isEmpty()) {
+            for (ProductDraftFile draftFile : draftFiles) {
+                ProductFile productFile = new ProductFile();
+                productFile.setProductId(product.getProductId());
+                productFile.setFileUrl(draftFile.getUrl()); // Reuse existing IPFS URL
+                fileRepo.insertProductFile(productFile);
+                publishedFileUrls.add(draftFile.getUrl());
+            }
+            // Save embedding for the first image of the newly published product
+            saveEmbedding(product.getProductId(), publishedFileUrls.get(0));
+        }
+
+        // Delete draft files and the draft itself
+        draftProductFileRepo.deleteDraftFilesByDraftId(draftId);
+        draftProductFileRepo.deleteDraftProduct(draftId);
+
+        // Return the newly published product DTO
+        return getProductWithFilesById(product.getProductId());
+    }
+
+    // Helper to save files for a draft
+    private void saveFilesForDraft(Long draftId, MultipartFile[] files) {
+        if (files == null || files.length == 0) return;
+
+        MultipartFile[] limitedFiles = files.length > 5 ? Arrays.copyOfRange(files, 0, 5) : files;
+        for (MultipartFile file : limitedFiles) {
+            String url = uploadFileToPinata(file); // Upload to Pinata
+
+            ProductDraftFile draftFile = new ProductDraftFile();
+            draftFile.setDraftId(draftId);
+            draftFile.setUrl(url);
+            draftProductFileRepo.insertDraftProductFile(draftFile);
         }
     }
 }

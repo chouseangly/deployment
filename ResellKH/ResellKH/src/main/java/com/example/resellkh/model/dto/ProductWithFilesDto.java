@@ -1,5 +1,6 @@
 package com.example.resellkh.model.dto;
 
+import com.example.resellkh.model.entity.ProductDraft;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -11,7 +12,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductWithFilesDto {
+public class ProductWithFilesDto extends ProductDraft {
     private Long productId;
     private String productName;
     private Long userId;
@@ -24,8 +25,8 @@ public class ProductWithFilesDto {
     private String location;
     private String telegramUrl;
     private String condition;
-    private double Latitude;
-    private double Longitude;
+    private Double latitude;
+    private Double longitude;
     private LocalDateTime createdAt;
     private List<String> fileUrls;
 

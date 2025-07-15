@@ -7,6 +7,7 @@ import com.example.resellkh.service.CartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -41,4 +42,10 @@ public class CartServiceImpl implements CartService {
     public void removeProduct(Long userId, Long productId) {
         cartRepo.removeProductFromCart(userId, productId);
     }
+
+    @Override
+    public int getCartItemCount(Long userId) {
+        return cartRepo.getCartItemCount(userId);
+    }
+
 }

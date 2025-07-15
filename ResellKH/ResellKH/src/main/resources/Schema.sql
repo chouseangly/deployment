@@ -14,6 +14,7 @@ CREATE TABLE products (
                           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
 );
+SELECT * FROM users;
 ALTER TABLE products ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
 
@@ -55,7 +56,7 @@ UPDATE user_profile SET slogan = 'SUSU, Youre Very Strong' WHERE profile_id = 2;
 DELETE FROM users WHERE user_id = 7;
 
 INSERT INTO user_profile(user_id, first_name, last_name) VALUES (6, 'loun', 'siven');
-UPDATE user_profile SET profile_image = 'https://gateway.pinata.cloud/ipfs/QmQ2pi5ptqpvJixDEsLRQxDQafcJGLv6hhjKxZUb2cp9iQ' WHER profile_id = 3;;
+UPDATE user_profile SET profile_image = 'https://gateway.pinata.cloud/ipfs/QmQ2pi5ptqpvJixDEsLRQxDQafcJGLv6hhjKxZUb2cp9iQ' WHERE profile_id = 3;;
 
 CREATE TABLE product_images (
                                 id SERIAL PRIMARY KEY,
@@ -110,6 +111,68 @@ CREATE TABLE notifications (
                                content TEXT,
                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE product_drafts (
+                                draft_id SERIAL PRIMARY KEY,
+                                product_name VARCHAR(255),
+                                user_id INTEGER REFERENCES users(user_id),
+                                main_category_id INTEGER REFERENCES main_category(main_category_id),
+                                product_price DOUBLE PRECISION,
+                                discount_percent DOUBLE PRECISION,
+                                product_status VARCHAR(50) DEFAULT 'draft', -- to mark draft status
+                                description TEXT,
+                                location TEXT,
+                                latitude DOUBLE PRECISION,
+                                longitude DOUBLE PRECISION,
+                                condition VARCHAR(50),
+                                telegram_url VARCHAR(255),
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE product_draft_images (
+                                      id SERIAL PRIMARY KEY,
+                                      draft_id INTEGER REFERENCES product_drafts(draft_id) ON DELETE CASCADE,
+                                      url TEXT NOT NULL
+);
+
+select * from product_drafts;;
+
+CREATE TABLE seller (
+                        seller_id SERIAL PRIMARY KEY,
+                        user_id INTEGER REFERENCES users(user_id),
+                        business_name VARCHAR(255),
+                        business_type VARCHAR(255),
+                        Business_address TEXT,
+                        Business_description TEXT,
+                        expected_revenue DOUBLE PRECISION,
+
+                        bank_name VARCHAR(255),
+                        bank_account_name VARCHAR(255),
+                        bank_account_number VARCHAR(255),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+INSERT INTO seller (
+    user_id,
+    business_name,
+    business_type,
+    Business_address,
+    Business_description,
+    expected_revenue,
+    bank_name,
+    bank_account_name,
+    bank_account_number
+) VALUES (
+             6, -- user_id
+             'Sample Business Co.',
+             'company',
+             '123 Main Street, Phnom Penh, Cambodia',
+             'Selling electronics and home goods online.',
+             5500.00,
+             'ABA Bank',
+             'John Doe',
+             '000-123456789'
+         );
 
 ALTER TABLE notifications
     ADD COLUMN title VARCHAR(255);
@@ -260,6 +323,91 @@ UPDATE products SET latitude = 11.5564, longitude = 104.9282 WHERE product_id >=
 select * from products where product_id >80;
 UPDATE user_profile SET profile_image = 'https://gateway.pinata.cloud/ipfs/QmNb6F1KSKypzBLa9pawQhGcjUmUubpeHoyXBeMyEnsUHK' WHERE profile_id = 16;
 UPDATE notification_type SET icon_url = 'https://gateway.pinata.cloud/ipfs/QmdMXVZ9KCiNGMwFHxkPMfpUfeGL8QQpMoENKeR5NKJ51F' WHERE type_id = 1;
+
+CREATE TABLE order (
+                        order_id SERIAL PRIMARY KEY,
+                        buyer_id INTEGER REFERENCES users(user_id),
+                        total_amount DOUBLE PRECISION NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+TRUNCATE TABLE product_draft_images CASCADE;
+
+ALTER TABLE product_draft_images DROP CONSTRAINT product_draft_images_draft_id_fkey;
+
+-- Fix column type
+ALTER TABLE product_draft_images
+    ALTER COLUMN draft_id TYPE BIGINT USING draft_id::BIGINT;
+
+-- Re-add the foreign key
+ALTER TABLE product_draft_images
+    ADD CONSTRAINT product_draft_images_draft_id_fkey
+        FOREIGN KEY (draft_id) REFERENCES product_drafts(draft_id) ON DELETE CASCADE;
+
+
+CREATE TABLE order_items (
+                             order_item_id SERIAL PRIMARY KEY,
+                             order_id INTEGER REFERENCES orders(order_id) ON DELETE CASCADE,
+                             product_id INTEGER REFERENCES products(product_id),
+                             seller_id INTEGER REFERENCES seller(seller_id),
+                             price DOUBLE PRECISION NOT NULL
+);
+
+DROP TABLE seller;
+SELECT * FROM seller;
+SELECT * FROM orders;
+SELECT * FROM order_items;
+DROP TABLE orders CASCADE;
+DROP TABLE order_items;
+
+CREATE TABLE orders (
+                        order_id SERIAL PRIMARY KEY,
+                        buyer_id INTEGER REFERENCES users(user_id),
+                        full_name VARCHAR(255),
+                        phone_number VARCHAR(10),
+                        address TEXT,
+                        sub_total DOUBLE PRECISION NOT NULL,
+                        delivery DOUBLE PRECISION,
+                        total_amount DOUBLE PRECISION NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE orders ADD COLUMN  status VARCHAR(20) DEFAULT 'PENDING';
+--PENDING, PAID, SHIPPED, DELIVERED
+
+CREATE TABLE order_items (
+                             order_item_id SERIAL PRIMARY KEY,
+                             order_id INTEGER REFERENCES orders(order_id) ON DELETE CASCADE,
+                             product_id INTEGER REFERENCES products(product_id),
+                             price DOUBLE PRECISION NOT NULL,
+                             seller_id INTEGER REFERENCES users(user_id)
+);
+
+CREATE TABLE payments (
+                          payment_id SERIAL PRIMARY KEY,
+                          order_id INTEGER NOT NULL REFERENCES orders(order_id) ON DELETE CASCADE,
+                          buyer_id INTEGER REFERENCES users(user_id),
+                          amount DOUBLE PRECISION NOT NULL,
+                          method VARCHAR(50) NOT NULL,                    -- e.g. CARD, BANK_TRANSFER, QR_CODE
+                          status VARCHAR(20) DEFAULT 'SUCCESS',          -- e.g. SUCCESS, FAILED, PENDING
+                          transaction_reference VARCHAR(255),            -- optional, bank or gateway transaction id
+                          paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE seller_settlements (
+                                    settlement_id SERIAL PRIMARY KEY,
+                                    seller_id INTEGER NOT NULL REFERENCES seller(seller_id) ON DELETE CASCADE,
+                                    order_item_id INTEGER REFERENCES order_items(order_item_id),
+                                    amount DOUBLE PRECISION NOT NULL,
+                                    status VARCHAR(20) DEFAULT 'PENDING',          -- e.g. PENDING, COMPLETED, FAILED
+                                    scheduled_at TIMESTAMP NOT NULL,              -- planned payout date
+                                    settled_at TIMESTAMP                           -- actual payout timestamp
+);
+
+SELECT * FROM seller;
+ALTER TABLE payments ADD COLUMN bank_name VARCHAR(255);
+
+
+
 
 
 

@@ -15,6 +15,13 @@ public interface ProductEmbeddingRepo {
     })
     List<ProductEmbeddingRecord> getAllEmbeddings();
 
+    @Update("UPDATE product_embeddings SET vector = CAST(#{vectorJson} AS jsonb) WHERE product_id = #{productId}")
+    int updateEmbedding(@Param("productId") Long productId, @Param("vectorJson") String vectorJson);
+
+
+    @Select("SELECT COUNT(*) FROM product_embeddings WHERE product_id = #{productId}")
+    int countByProductId(@Param("productId") Long productId);
+
     class ProductEmbeddingRecord {
         private Long productId;
         private String vectorJson;

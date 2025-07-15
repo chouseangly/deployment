@@ -10,4 +10,6 @@ public interface CartService {
     List<CartItem> getCartItems(Long userId);
     void clearCart(Long userId);
     void removeProduct(Long userId, Long productId);
+
+    int getCartItemCount(Long userId);
 }

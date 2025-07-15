@@ -7,6 +7,11 @@ import java.util.List;
 
 @Mapper
 public interface CartRepo {
+    @Select("""
+    SELECT * FROM cart where 
+""")
+    List<CartItem> getCartByUserId(Long userId);
+
 
     @Insert("""
         INSERT INTO cart (user_id, product_id, quantity)
@@ -62,4 +67,8 @@ public interface CartRepo {
         WHERE user_id = #{userId} AND product_id = #{productId}
     """)
     void removeProductFromCart(@Param("userId") Long userId, @Param("productId") Long productId);
+    @Select("""
+    SELECT COUNT(*) FROM cart WHERE user_id = #{userId}
+""")
+    int getCartItemCount(Long userId);
 }

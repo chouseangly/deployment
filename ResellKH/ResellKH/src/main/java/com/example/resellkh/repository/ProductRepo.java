@@ -108,7 +108,7 @@ public interface ProductRepo {
             description = #{description},
             location = #{location},
             condition = #{condition},
-            telegram_url = #{product.telegramUrl},
+            telegram_url = #{telegramUrl},
             latitude = #{latitude},
             longitude = #{longitude},
             updated_at = NOW()
@@ -206,6 +206,101 @@ public interface ProductRepo {
     List<Product> getProductsInCartByUserId(Long userId);
     @Delete("DELETE FROM cart WHERE user_id = #{userId}")
     void clearCartByUserId(Long userId);
+    @Select("""
+    SELECT p.*, c.name AS category_name
+    FROM products p
+    LEFT JOIN main_category c ON p.main_category_id = c.main_category_id
+    WHERE p.user_id = #{userId} AND p.product_status = #{status}
+""")
+    @Results({
+            @Result(property = "productId", column = "product_id"),
+            @Result(property = "productName", column = "product_name"),
+            @Result(property = "userId", column = "user_id"),
+            @Result(property = "mainCategoryId", column = "main_category_id"),
+            @Result(property = "categoryName", column = "category_name"),
+            @Result(property = "productPrice", column = "product_price"),
+            @Result(property = "discountPercent", column = "discount_percent"),
+            @Result(property = "productStatus", column = "product_status"),
+            @Result(property = "description", column = "description"),
+            @Result(property = "location", column = "location"),
+            @Result(property = "telegramUrl", column = "telegram_url"),
+            @Result(property = "condition", column = "condition"),
+            @Result(property = "createdAt", column = "created_at"),
+            @Result(property = "latitude", column = "latitude"),
+            @Result(property = "longitude", column = "longitude"),
+            @Result(property = "fileUrls", column = "product_id",
+                    many = @Many(select = "com.example.resellkh.repository.ProductFileRepo.findUrlsByProductId"))
+    })
+    List<ProductWithFilesDto> findByUserIdAndStatus(@Param("userId") Long userId, @Param("status") String status);
+// In ProductRepo interface, add these methods:
 
+    @Update("""
+    UPDATE products 
+    SET product_status = #{status}, 
+        updated_at = NOW() 
+    WHERE product_id = #{productId} AND user_id = #{userId}
+""")
+    int updateProductStatus(@Param("productId") Long productId,
+                            @Param("userId") Long userId,
+                            @Param("status") String status);
 
+    @Select("""
+    SELECT p.*, c.name AS category_name
+    FROM products p
+    LEFT JOIN main_category c ON p.main_category_id = c.main_category_id
+    WHERE p.user_id = #{userId} AND LOWER(p.product_status) = 'draft'
+""")
+    @Results({
+            @Result(property = "productId", column = "product_id"),
+            @Result(property = "productName", column = "product_name"),
+            @Result(property = "userId", column = "user_id"),
+            @Result(property = "mainCategoryId", column = "main_category_id"),
+            @Result(property = "categoryName", column = "category_name"),
+            @Result(property = "productPrice", column = "product_price"),
+            @Result(property = "discountPercent", column = "discount_percent"),
+            @Result(property = "productStatus", column = "product_status"),
+            @Result(property = "description", column = "description"),
+            @Result(property = "location", column = "location"),
+            @Result(property = "telegramUrl", column = "telegram_url"),
+            @Result(property = "condition", column = "condition"),
+            @Result(property = "createdAt", column = "created_at"),
+            @Result(property = "latitude", column = "latitude"),
+            @Result(property = "longitude", column = "longitude"),
+            @Result(property = "fileUrls", column = "product_id",
+                    many = @Many(select = "com.example.resellkh.repository.ProductFileRepo.findUrlsByProductId"))
+    })
+    List<ProductWithFilesDto> findDraftsByUserId(@Param("userId") Long userId);
+
+    @Select("""
+    SELECT p.*, c.name AS category_name
+    FROM products p
+    LEFT JOIN main_category c ON p.main_category_id = c.main_category_id
+    WHERE LOWER(p.product_status) = LOWER(#{status})
+""")
+    @Results({
+            @Result(property = "productId", column = "product_id"),
+            @Result(property = "productName", column = "product_name"),
+            @Result(property = "userId", column = "user_id"),
+            @Result(property = "mainCategoryId", column = "main_category_id"),
+            @Result(property = "categoryName", column = "category_name"),
+            @Result(property = "productPrice", column = "product_price"),
+            @Result(property = "discountPercent", column = "discount_percent"),
+            @Result(property = "productStatus", column = "product_status"),
+            @Result(property = "description", column = "description"),
+            @Result(property = "location", column = "location"),
+            @Result(property = "telegramUrl", column = "telegram_url"),
+            @Result(property = "condition", column = "condition"),
+            @Result(property = "createdAt", column = "created_at"),
+            @Result(property = "latitude", column = "latitude"),
+            @Result(property = "longitude", column = "longitude"),
+            @Result(property = "fileUrls", column = "product_id",
+                    many = @Many(select = "com.example.resellkh.repository.ProductFileRepo.findUrlsByProductId"))
+    })
+    List<ProductWithFilesDto> findAllByStatus(@Param("status") String status);
+
+    @Select("SELECT product_status FROM products WHERE product_id = #{productId} AND user_id = #{userId}")
+    String getProductStatusForUser(@Param("productId") Long productId, @Param("userId") Long userId);
+    @Select("SELECT * FROM products WHERE product_id = #{productId}")
+
+    Product findByDraftId(Long draftId);
 }

@@ -17,11 +17,13 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @RequiredArgsConstructor
+@EnableTransactionManagement
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
@@ -51,6 +53,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
+                        // Public endpoints
                         .requestMatchers(
                                 "/api/v1/auths/register",
                                 "/api/v1/auths/login",
@@ -62,22 +65,28 @@ public class SecurityConfig {
                                 "/api/v1/auths/google"
                         ).permitAll()
 
+                        // Public GET endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/ratings/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/profile/**").permitAll()
 
+                        // Authenticated endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/getproductbyuserid/{userId}").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/drafts/user/{userId}").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/upload").authenticated()
-                        .requestMatchers(HttpMethod.POST,"/api/v1/products/search-by-image").authenticated()
-                        .requestMatchers(HttpMethod.POST,"/api/v1/favourites").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/search-by-image").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/save-draft").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/favourites").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/products/update-draft/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/sellers/user/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/reverse-geocode").authenticated()
 
-
+                        // Swagger
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-
 
                         .anyRequest().authenticated()
                 )
