@@ -408,6 +408,10 @@ CREATE TABLE seller_settlements (
 SELECT * FROM seller;
 ALTER TABLE payments ADD COLUMN bank_name VARCHAR(255);
 
+SELECT COUNT(*)
+FROM products
+WHERE user_id = 6; -- Replace 123 with the actual seller_id you want to count for
+
 
 
 

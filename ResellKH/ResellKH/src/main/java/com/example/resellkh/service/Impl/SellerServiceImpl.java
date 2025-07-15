@@ -1,3 +1,4 @@
+// chouseangly/deployment/deployment-main/ResellKH/ResellKH/src/main/java/com/example/resellkh/service/Impl/SellerServiceImpl.java
 package com.example.resellkh.service.Impl;
 
 import com.example.resellkh.model.dto.SellerRequest;
@@ -18,57 +19,64 @@ public class SellerServiceImpl implements SellerService {
     @Override
     @Transactional
     public Seller createSeller(SellerRequest request) {
-        // Convert DTO to Entity
         Seller seller = Seller.builder()
                 .userId(request.getUserId())
                 .businessName(request.getBusinessName())
                 .businessType(request.getBusinessType())
                 .businessAddress(request.getBusinessAddress())
                 .businessDescription(request.getBusinessDescription())
-                .expectedRevenue(Double.valueOf(String.valueOf(request.getExpectedRevenue())))
+                .expectedRevenue(request.getExpectedRevenue())
                 .bankName(request.getBankName())
                 .bankAccountName(request.getBankAccountName())
                 .bankAccountNumber(request.getBankAccountNumber())
                 .build();
-
-        // Insert and get generated ID
         sellerRepo.insertSeller(seller);
         userProfileRepo.updateIsSeller(request.getUserId(), true);
+        return sellerRepo.findByUserId(request.getUserId());
+    }
 
-        // Return the complete entity with generated ID
-        return sellerRepo.findById(seller.getSellerId());
+    @Override
+    @Transactional
+    public Seller getSellerByUserId(Long userId) {
+        return sellerRepo.findByUserId(userId);
     }
 
 
+    @Transactional
+    public Seller getSellerBySellerId(Long sellerId) {
+        return sellerRepo.getSellerBySellerId(sellerId);
+    }
 
+    // --- REFACTORED AND CORRECTED UPDATE METHOD ---
     @Override
     @Transactional
     public Seller updateSeller(Long sellerId, SellerRequest request) {
-        // FIX: Changed findById to the correct method name: getSellerBySellerId
-        Seller existingSeller = sellerRepo.getSellerBySellerId(sellerId);
+        // To be absolutely certain, we will construct a new Seller object
+        // with the exact data to be updated.
+        Seller sellerToUpdate = new Seller();
 
-        if (existingSeller == null) {
-            // This makes the error message clearer if the seller isn't found
-            throw new RuntimeException("Seller not found with ID: " + sellerId);
+        // IMPORTANT: Set the ID for the WHERE clause of the UPDATE statement
+        sellerToUpdate.setSellerId(sellerId);
+
+        // Set all other fields from the incoming request
+        sellerToUpdate.setBusinessName(request.getBusinessName());
+        sellerToUpdate.setBusinessType(request.getBusinessType());
+        sellerToUpdate.setBusinessAddress(request.getBusinessAddress());
+        sellerToUpdate.setBusinessDescription(request.getBusinessDescription());
+        sellerToUpdate.setExpectedRevenue(request.getExpectedRevenue());
+        sellerToUpdate.setBankName(request.getBankName());
+        sellerToUpdate.setBankAccountName(request.getBankAccountName());
+        sellerToUpdate.setBankAccountNumber(request.getBankAccountNumber());
+
+        // Now, pass this clean object to the repository
+        int rowsAffected = sellerRepo.updateSeller(sellerToUpdate);
+
+        // This check remains crucial. If it fails, something is wrong with the sellerId.
+        if (rowsAffected == 0) {
+            throw new RuntimeException("Update failed: No seller found with ID " + sellerId + " in the database.");
         }
 
-        // Update fields from the request
-        existingSeller.setBusinessName(request.getBusinessName());
-        existingSeller.setBusinessType(request.getBusinessType());
-        existingSeller.setBusinessAddress(request.getBusinessAddress());
-        existingSeller.setBusinessDescription(request.getBusinessDescription());
-        existingSeller.setExpectedRevenue(request.getExpectedRevenue());
-        existingSeller.setBankName(request.getBankName());
-        existingSeller.setBankAccountName(request.getBankAccountName());
-        existingSeller.setBankAccountNumber(request.getBankAccountNumber());
-
-        sellerRepo.updateSeller(existingSeller);
-
-        return existingSeller;
-    }
-    @Transactional
-    @Override
-    public Seller getSellerByUserId(Long userId) {
-        return sellerRepo.findByUserId(userId);
+        // Return the updated object
+        return sellerToUpdate;
     }
 }

@@ -35,6 +35,12 @@ public class OrderController {
         return jwtService.extractUserId(token);
     }
 
+    @GetMapping("/countproduct/{userId}")
+    public ResponseEntity<Integer> countProductsByUser(@PathVariable Long userId) {
+        int count = orderService.countAllProductByUserId(userId);
+        return ResponseEntity.ok(count);
+    }
+
     @PostMapping("/insertorder")
     public ResponseEntity<ApiResponse<Order>> insert(@RequestBody OrderRequest orderRequest) {
         if (orderRequest.getBuyerId() == null || orderRequest.getOrderItems() == null || orderRequest.getOrderItems().isEmpty()) {
