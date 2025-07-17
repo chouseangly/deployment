@@ -52,7 +52,7 @@ public class ProductServiceImpl implements ProductService {
     private String pinataSecretApiKey;
 
     private static final String PINATA_URL = "https://api.pinata.cloud/pinning/pinFileToIPFS";
-    private static final String PYTHON_VECTOR_URL = "https://regions-gray-colony-tsunami.trycloudflare.com/extract-vector";
+    private static final String PYTHON_VECTOR_URL = "https://technological-publishers-gif-school.trycloudflare.com/extract-vector";
 
     @Transactional
     @Override

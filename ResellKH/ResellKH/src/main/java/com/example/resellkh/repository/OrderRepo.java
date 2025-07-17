@@ -49,9 +49,9 @@ public interface OrderRepo {
             @Result(property = "sellerFirstName", column = "sellerFirstName"),
             @Result(property = "sellerLastName", column = "sellerLastName"),
             @Result(property = "sellerUsername", column = "sellerUserName"),
-            @Result(property = "sellerProfileImageUrl", column = "sellerProfileImageUrl"),
+            @Result(property = "sellerProfileImageUrl", column = "profile_image"),
             @Result(property = "orderItems", javaType = List.class, column = "order_id",
-                    many = @Many(resultMap = "buyerOrderItemSubMap"))
+                    many = @Many(resultMap = "buyerOrderItemSubMap")) // Reference the sub-map
     })
     @Select("SELECT " +
             "    o.order_id , " +
@@ -62,7 +62,60 @@ public interface OrderRepo {
             "    o.delivery AS orderDeliveryCharge , " +
             "    o.total_amount AS orderTotalAmount, " +
             "    o.created_at AS orderCreatedAt, " +
-            "    b.email AS buyerEmail, " + // Buyer's email
+            "    b.email AS buyerEmail, " +
+
+            "    oi.order_item_id , " +
+            "    oi.product_id AS orderProductId, " +
+            "    oi.price AS itemPriceAtPurchase, " +
+            "    oi.seller_id , " +
+
+            "    p.product_name , " +
+            "    p.product_price AS currentProductPrice , " +
+
+            "    pi.url AS productCoverImageUrl, " +
+
+            "    s.user_id AS sellerId, " +
+            "    s.first_name AS sellerFirstName, " +
+            "    s.last_name AS sellerLastName, " +
+            "    sp.user_name AS sellerUserName, " +
+            "    sp.profile_image " +
+            "FROM " +
+            "    orders o " +
+            "JOIN " +
+            "    users b ON o.buyer_id = b.user_id " +
+            "JOIN " +
+            "    order_items oi ON o.order_id = oi.order_id " +
+            "JOIN " +
+            "    products p ON oi.product_id = p.product_id " +
+            "JOIN " +
+            "    users s ON p.user_id = s.user_id " +
+            "LEFT JOIN " +
+            "    user_profile sp ON s.user_id = sp.user_id " +
+            "LEFT JOIN " +
+            "    product_images pi ON p.product_id = pi.product_id AND pi.id = ( " +
+            "        SELECT MIN(id) FROM product_images WHERE product_id = p.product_id " +
+            "    ) " +
+            "WHERE " +
+            "    o.buyer_id = #{sellerId} " +
+            "ORDER BY " +
+            "    o.created_at DESC, oi.order_item_id")
+    List<OrderResponse> getOrdersWithItemsByBuyerId(@Param("sellerId") Long sellerId); // This method uses the map
+
+    @Select("SELECT COUNT(*) FROM products WHERE user_id = #{userId}")
+    int countAllProductByUserId(@Param("userId") Long userId);
+
+    // This method now *references* the already defined result map by its ID
+    @ResultMap("buyerOrderCombinedResultMap") // <--- Referencing the existing map
+    @Select("SELECT " +
+            "    o.order_id , " +
+            "    o.full_name AS buyerFullName, " +
+            "    o.phone_number AS buyerPhoneNumber , " +
+            "    o.address AS buyerAddress , " +
+            "    o.sub_total AS orderSubTotal, " +
+            "    o.delivery AS orderDeliveryCharge , " +
+            "    o.total_amount AS orderTotalAmount, " +
+            "    o.created_at AS orderCreatedAt, " +
+            "    b.email AS buyerEmail, " +
 
             "    oi.order_item_id , " +
             "    oi.product_id AS orderProductId, " +
@@ -81,26 +134,24 @@ public interface OrderRepo {
             "FROM " +
             "    orders o " +
             "JOIN " +
-            "    users b ON o.buyer_id = b.user_id " + // Join for buyer's email
+            "    users b ON o.buyer_id = b.user_id " +
             "JOIN " +
             "    order_items oi ON o.order_id = oi.order_id " +
             "JOIN " +
             "    products p ON oi.product_id = p.product_id " +
             "JOIN " +
-            "    users s ON p.user_id = s.user_id " + // Join for seller details
+            "    users s ON p.user_id = s.user_id " +
             "LEFT JOIN " +
-            "    user_profile sp ON s.user_id = sp.user_id " + // Left Join for seller profile
+            "    user_profile sp ON s.user_id = sp.user_id " +
             "LEFT JOIN " +
             "    product_images pi ON p.product_id = pi.product_id AND pi.id = ( " +
             "        SELECT MIN(id) FROM product_images WHERE product_id = p.product_id " +
             "    ) " +
             "WHERE " +
-            "    o.buyer_id = #{sellerId} " +
+            "    o.order_id = #{orderId} " +
             "ORDER BY " +
-            "    o.created_at DESC, oi.order_item_id") // Order by order creation and then item ID
-    List<OrderResponse> getOrdersWithItemsByBuyerId(@Param("sellerId") Long sellerId);
+            "    o.created_at DESC, oi.order_item_id")
+    List<OrderResponse> getOrdersWithItemsByOrderId(@Param("orderId") Long orderId); // This method also uses the map
 
-    @Select("SELECT COUNT(*) FROM products WHERE user_id = #{userId}")
-    int countAllProductByUserId(@Param("userId") Long userId);
 
 }

@@ -57,6 +57,11 @@ public class OrderServiceImpl implements OrderService {
         return orderRepository.countAllProductByUserId(userId);
     }
 
+    @Override
+    public List<OrderResponse> getSellerOrdersByOrderId(Long orderId) {
+        return orderRepository.getOrdersWithItemsByOrderId(orderId);
+    }
+
 //    @Override
 //    public Order createOrderFromCartWithDelivery(Long userId, DeliveryInfoDto deliveryInfo) {
 //        List<Product> cartProducts = productRepo.getProductsInCartByUserId(userId);

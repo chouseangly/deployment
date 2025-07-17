@@ -70,11 +70,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/ratings/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/profile/**").permitAll()
 
+
                         // Authenticated endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/getproductbyuserid/{userId}").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/drafts/user/{userId}").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/upload").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/products/search-by-image").authenticated()
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/search-by-image").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/save-draft").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/favourites").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/v1/products/update-draft/**").authenticated()

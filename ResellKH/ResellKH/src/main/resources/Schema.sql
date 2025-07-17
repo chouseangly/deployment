@@ -404,13 +404,15 @@ CREATE TABLE seller_settlements (
                                     scheduled_at TIMESTAMP NOT NULL,              -- planned payout date
                                     settled_at TIMESTAMP                           -- actual payout timestamp
 );
+delete from users where  user_id = 8;
 
 SELECT * FROM seller;
 ALTER TABLE payments ADD COLUMN bank_name VARCHAR(255);
-
+truncate table product_drafts cascade ;
 SELECT COUNT(*)
 FROM products
 WHERE user_id = 6; -- Replace 123 with the actual seller_id you want to count for
+SELECT * FROM users WHERE user_id = 51;
 
 
 

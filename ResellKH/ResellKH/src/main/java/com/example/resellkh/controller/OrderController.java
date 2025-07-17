@@ -102,6 +102,21 @@ public class OrderController {
         }
     }
 
+    @GetMapping("/seller/receipt/{orderId}")
+    public ResponseEntity<List<OrderResponse>> getSellerOrdersByOrderId(@PathVariable Long orderId) {
+        try {
+            List<OrderResponse> sellerOrders = orderService.getSellerOrdersByOrderId(orderId);
+            if (sellerOrders.isEmpty()) {
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            }
+            return new ResponseEntity<>(sellerOrders, HttpStatus.OK);
+        } catch (Exception e) {
+            System.err.println("Error fetching seller orders: " + e.getMessage());
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
 //    @PostMapping("/checkout")
 //    public ResponseEntity<ApiResponse<Order>> checkoutOrder(
 //            HttpServletRequest request,

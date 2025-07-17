@@ -4,7 +4,9 @@ import com.example.resellkh.jwt.JwtService;
 import com.example.resellkh.model.dto.ApiResponse;
 import com.example.resellkh.model.dto.ProductWithFilesDto;
 import com.example.resellkh.model.entity.CartItem;
+import com.example.resellkh.model.entity.Notification;
 import com.example.resellkh.service.CartService;
+import com.example.resellkh.service.NotificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,7 @@ public class CartController {
 
     private final CartService cartService;
     private final JwtService jwtService;
+    private final NotificationService notificationService;
 
     private Long getUserIdFromRequest(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
@@ -47,7 +50,16 @@ public class CartController {
                             .build()
             );
         }
+        int id = Math.toIntExact(userId);
         ProductWithFilesDto product = cartService.addProductToCart(userId, productId, quantity);
+//        Add Notification
+        Notification notification = Notification.builder()
+                .userId(id)
+                .title(("added to cart"))
+                .content("Your was added Product name "+ product.getProductName() + "to cart successfully.")
+                .typeId(1L)
+                .build();
+        notificationService.createNotificationWithType(notification);
         return ResponseEntity.ok(ApiResponse.<ProductWithFilesDto>builder()
                 .message("Product added to cart")
                 .payload(product)

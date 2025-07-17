@@ -17,4 +17,5 @@ public interface OrderService {
     // Method to get orders for a seller, with nested items
     List<OrderResponse> getSellerOrders(Long sellerId);
     int countAllProductByUserId(Long userId);
+    List<OrderResponse> getSellerOrdersByOrderId(Long orderId);
 }
