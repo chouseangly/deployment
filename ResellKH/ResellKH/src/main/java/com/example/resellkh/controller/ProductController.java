@@ -216,16 +216,11 @@ public class ProductController {
                 )
         );
     }
-    @PostMapping(value = "/search-by-image",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/search-by-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<List<ProductWithFilesDto>>> searchByImageUrl(@RequestParam("file") MultipartFile file) {
         List<ProductWithFilesDto> result = productService.searchByImageUrl(file);
         return ResponseEntity.ok(
-                new ApiResponse<>(
-                        "Similar products found",
-                        result,
-                        HttpStatus.OK.value(),
-                        LocalDateTime.now()
-                )
+                new ApiResponse<>("Similar products found", result, HttpStatus.OK.value(), LocalDateTime.now())
         );
     }
     @GetMapping("/nearby/{lat}/{lng}")

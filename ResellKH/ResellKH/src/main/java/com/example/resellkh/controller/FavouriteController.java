@@ -2,8 +2,11 @@ package com.example.resellkh.controller;
 
 import com.example.resellkh.model.dto.ApiResponse;
 import com.example.resellkh.model.dto.FavouriteRequest;
+import com.example.resellkh.model.dto.NotificationFavorite;
 import com.example.resellkh.model.entity.Favourite;
+import com.example.resellkh.model.entity.Notification;
 import com.example.resellkh.service.FavouriteService;
+import com.example.resellkh.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +21,23 @@ import java.util.List;
 public class FavouriteController {
 
     private final FavouriteService favouriteService;
+    private final NotificationService notificationService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<Favourite>> addFavourite(@RequestBody FavouriteRequest favouriteRequest) {
         Favourite favourite = favouriteService.addFavourite(favouriteRequest);
+        Long productId = Long.valueOf(favouriteRequest.getProductId());
+        NotificationFavorite notificationFavorite = notificationService.favoriteNotification(productId);
+        Notification notification = Notification.builder()
+                .userId(favourite.getUserId())
+                .title("Favourite")
+                .content(notificationFavorite.getDescription())
+                .iconUrl(notificationFavorite.getProfileImage())
+                .build();
+        notificationService.createNotificationWithType(notification);
+        int intProductId = productId.intValue();
+        int generatedNotificationId = notification.getId();
+        notificationService.insertproductId(intProductId, generatedNotificationId);
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 new ApiResponse<>(
                         "Add favourite successfully",

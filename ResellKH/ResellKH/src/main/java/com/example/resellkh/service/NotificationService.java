@@ -1,5 +1,6 @@
 package com.example.resellkh.service;
 
+import com.example.resellkh.model.dto.NotificationFavorite;
 import com.example.resellkh.model.dto.NotificationRequest;
 import com.example.resellkh.model.entity.Notification;
 
@@ -12,4 +13,7 @@ public interface NotificationService {
     List<Notification> getAllNotificationsByUserId(int userId);
     void markNotificationAsRead(int userId, int id);
     void createNotificationWithType(Notification notification);
+    NotificationFavorite favoriteNotification(Long productId);
+    int insertproductId(int productId, int id);
+    Integer getProductIdByNoId(int id);
 }

@@ -53,13 +53,13 @@ public class CartController {
         int id = Math.toIntExact(userId);
         ProductWithFilesDto product = cartService.addProductToCart(userId, productId, quantity);
 //        Add Notification
-        Notification notification = Notification.builder()
-                .userId(id)
-                .title(("added to cart"))
-                .content("Your was added Product name "+ product.getProductName() + "to cart successfully.")
-                .typeId(1L)
-                .build();
-        notificationService.createNotificationWithType(notification);
+//        Notification notification = Notification.builder()
+//                .userId(id)
+//                .title(("added to cart"))
+//                .content("Your was added Product name "+ product.getProductName() + "to cart successfully.")
+//                .typeId(1L)
+//                .build();
+//        notificationService.createNotificationWithType();
         return ResponseEntity.ok(ApiResponse.<ProductWithFilesDto>builder()
                 .message("Product added to cart")
                 .payload(product)

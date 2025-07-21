@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 public class Notification {
     private int id;
     private int userId;
-    private Long typeId;
+    private Integer productId; // Changed from int to Integer
     private String title;
     private String content;
     private String iconUrl;

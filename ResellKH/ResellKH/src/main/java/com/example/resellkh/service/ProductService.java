@@ -41,4 +41,6 @@ public interface ProductService {
     List<ProductDraft> getDraftsByUser(Long userId);
 
     ProductDraft publishDraftProduct(Long draftId); // This method is key for publishing
+
+    ProductWithFilesDto deleteProductAndReturnDto(Long id);
 }

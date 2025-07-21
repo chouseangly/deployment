@@ -12,6 +12,7 @@ import com.example.resellkh.repository.ProductFileRepo;
 import com.example.resellkh.repository.ProductRepo;
 import com.example.resellkh.service.ProductHistoryService;
 import com.example.resellkh.service.ProductService;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +26,13 @@ import org.apache.http.util.EntityUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -53,7 +59,7 @@ public class ProductServiceImpl implements ProductService {
 
     private static final String PINATA_URL = "https://api.pinata.cloud/pinning/pinFileToIPFS";
     private static final String PYTHON_VECTOR_URL = "https://technological-publishers-gif-school.trycloudflare.com/extract-vector";
-
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     @Transactional
     @Override
     public ProductWithFilesDto uploadProductWithCategoryName(ProductRequest request, MultipartFile[] files) {
@@ -171,19 +177,15 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public List<ProductWithFilesDto> searchByImageUrl(MultipartFile file) {
         try {
-            // Step 1: Upload file to Pinata
             String ipfsUrl = uploadFileToPinata(file);
-
-            // Step 2: Call vector API with full IPFS URL
             List<Double> inputVector = callImageVectorAPI(ipfsUrl);
 
-            // Step 3: Compare with existing vectors
             List<ProductEmbeddingRepo.ProductEmbeddingRecord> all = productEmbeddingRepo.getAllEmbeddings();
             List<ProductWithSimilarity> similarities = new ArrayList<>();
 
             for (ProductEmbeddingRepo.ProductEmbeddingRecord record : all) {
                 try {
-                    List<Double> targetVector = new ObjectMapper().readValue(record.getVectorJson(), List.class);
+                    List<Double> targetVector = OBJECT_MAPPER.readValue(record.getVectorJson(), new TypeReference<>() {});
                     double similarity = computeCosineSimilarity(inputVector, targetVector);
                     similarities.add(new ProductWithSimilarity(record.getProductId(), similarity));
                 } catch (IOException e) {
@@ -192,8 +194,8 @@ public class ProductServiceImpl implements ProductService {
             }
 
             return similarities.stream()
-                    .filter(sim -> sim.similarity > 0.9)
-                    .sorted((a, b) -> Double.compare(b.similarity, a.similarity))
+                    .filter(sim -> sim.similarity > 0.8)
+                    .sorted(Comparator.comparingDouble(ProductWithSimilarity::similarity).reversed())
                     .map(sim -> getProductWithFilesById(sim.productId))
                     .filter(Objects::nonNull)
                     .limit(10)
@@ -235,34 +237,46 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
+    // Replace the existing callImageVectorAPI method in your ProductServiceImpl.java
+// with this new version.
+
+    // Replace the existing callImageVectorAPI method in your ProductServiceImpl.java
+// with this new, correct version.
+
     private List<Double> callImageVectorAPI(String imageUrl) {
         try {
-            ObjectMapper mapper = new ObjectMapper();
+            // STEP 1: Create the correct JSON body {"url": "..."} that the Python service expects.
+            // We use a Map to represent the JSON object.
             Map<String, String> requestBody = Map.of("url", imageUrl);
-            String jsonBody = mapper.writeValueAsString(requestBody);
 
+            // STEP 2: Set the headers to indicate we are sending JSON data.
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<String> request = new HttpEntity<>(jsonBody, headers);
 
+            // STEP 3: Create the HTTP request entity with the JSON body and headers.
+            HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(requestBody, headers);
+
+            // STEP 4: Make the POST request and get the response.
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    PYTHON_VECTOR_URL, HttpMethod.POST, request,
+                    PYTHON_VECTOR_URL,
+                    HttpMethod.POST,
+                    requestEntity,
                     new ParameterizedTypeReference<>() {}
             );
 
-            Object rawVector = response.getBody().get("vector");
-            if (!(rawVector instanceof List<?> rawList)) {
-                throw new RuntimeException("Invalid vector format");
+            if (response.getBody() == null || !(response.getBody().get("vector") instanceof List<?> rawList)) {
+                throw new RuntimeException("Invalid or empty vector format received from Python service.");
             }
 
+            // Convert the result to a List of Doubles.
             return rawList.stream()
-                    .map(val -> ((Number) val).doubleValue())
+                    .map(val -> Double.valueOf(String.valueOf(val)))
                     .collect(Collectors.toList());
+
         } catch (Exception e) {
-            throw new RuntimeException("Failed to call Python vector service: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to call Python vector service for URL " + imageUrl + ": " + e.getMessage(), e);
         }
     }
-
     private double computeCosineSimilarity(List<Double> a, List<Double> b) {
         if (a.size() != b.size()) return 0;
         double dot = 0, normA = 0, normB = 0;
@@ -382,9 +396,9 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     @Override
     public ProductDraft saveDraftProduct(String productName, Long userId, Long mainCategoryId,
-                                                Double productPrice, Double discountPercent, String description,
-                                                String location, Double latitude, Double longitude, String condition,
-                                                String telegramUrl, MultipartFile[] files) {
+                                         Double productPrice, Double discountPercent, String description,
+                                         String location, Double latitude, Double longitude, String condition,
+                                         String telegramUrl, MultipartFile[] files) {
         ProductDraft draft = new ProductDraft();
         draft.setProductName(productName);
         draft.setUserId(userId);

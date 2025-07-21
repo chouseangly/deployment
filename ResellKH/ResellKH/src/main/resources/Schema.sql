@@ -414,7 +414,12 @@ FROM products
 WHERE user_id = 6; -- Replace 123 with the actual seller_id you want to count for
 SELECT * FROM users WHERE user_id = 51;
 
+ALTER TABLE notifications DROP COLUMN type_id;
 
+ALTER TABLE notifications ADD COLUMN icon_url VARCHAR(255);
+ALTER TABLE notifications ADD COLUMN product_id INTEGER DEFAULT NULL;
+
+SELECT id, product_id FROM notifications WHERE user_id = 6;
 
 
 

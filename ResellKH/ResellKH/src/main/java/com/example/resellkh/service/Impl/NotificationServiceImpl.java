@@ -1,5 +1,6 @@
 package com.example.resellkh.service.Impl;
 
+import com.example.resellkh.model.dto.NotificationFavorite;
 import com.example.resellkh.model.dto.NotificationRequest;
 import com.example.resellkh.model.entity.Notification;
 import com.example.resellkh.repository.NotificationRepo;
@@ -9,19 +10,21 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepo notificationRepo;
+
     @Override
     public Notification createNotification(NotificationRequest request) {
-       Notification notification = new Notification();
-       notification.setUserId(request.getUserId());
-       notification.setContent(request.getContent());
-       notification.setCreatedAt(LocalDateTime.now());
-       notificationRepo.createNotification(notification);
-       return notification;
+        Notification notification = new Notification();
+        notification.setUserId(request.getUserId());
+        notification.setContent(request.getContent());
+        notification.setCreatedAt(LocalDateTime.now());
+        notificationRepo.createNotification(notification);
+        return notification;
     }
 
     @Override
@@ -44,4 +47,20 @@ public class NotificationServiceImpl implements NotificationService {
     public void createNotificationWithType(Notification notification) {
         notificationRepo.createNotificationWithType(notification);
     }
+
+    @Override
+    public NotificationFavorite favoriteNotification(Long productId) {
+        return notificationRepo.getFavoriteNotification(productId);
+    }
+
+    @Override
+    public int insertproductId(int productId, int id) {
+        return notificationRepo.insertProductId(productId, id);
+    }
+
+    @Override
+    public Integer getProductIdByNoId(int id) { // Changed from int to Integer
+        return notificationRepo.getProductIdByNoId(id);
+    }
+
 }

@@ -21,6 +21,10 @@ public interface ProductEmbeddingRepo {
 
     @Select("SELECT COUNT(*) FROM product_embeddings WHERE product_id = #{productId}")
     int countByProductId(@Param("productId") Long productId);
+    @Delete("""
+        DELETE FROM product_embeddings WHERE product_id = #{productId}
+    """)
+    void deleteByProductId(Long productId);
 
     class ProductEmbeddingRecord {
         private Long productId;
