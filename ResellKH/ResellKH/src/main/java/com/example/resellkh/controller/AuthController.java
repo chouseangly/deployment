@@ -108,7 +108,7 @@ public class AuthController {
                     .body(Map.of("message", "Account not verified"));
         }
         Notification notification = Notification.builder()
-                .userId(auth.getUserId())
+                .userId(Long.valueOf(auth.getUserId()))
                 .title("Welcome to ResellKH")
                 .content("Welcome to ResellKH! We’re excited to have you join our community. As a new member, you can explore great deals, post your products, and connect with trusted buyers and sellers. Stay updated with the latest promotions, features, and security tips. Thank you for choosing ResellKH — let’s grow together!")
                 .iconUrl("https://gateway.pinata.cloud/ipfs/QmdMXVZ9KCiNGMwFHxkPMfpUfeGL8QQpMoENKeR5NKJ51F")

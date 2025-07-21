@@ -14,14 +14,14 @@ public interface NotificationRepo {
     void createNotification(Notification notification);
 
     @Select("SELECT * FROM notifications WHERE user_id = #{userId} ORDER BY created_at DESC")
-    List<Notification> getNotificationsByUserId(@Param("userId") int userId);
+    List<Notification> getNotificationsByUserId(@Param("userId") Long userId);
 
     @Select("SELECT n.id, n.user_id, n.title, n.content, n.is_read, n.created_at, n.updated_at, n.icon_url " +
             "FROM notifications n  WHERE n.user_id = #{userId} ORDER BY n.created_at DESC ")
-    List<Notification> getAllNotificationsByUserId(@Param("userId") int userId);
+    List<Notification> getAllNotificationsByUserId(@Param("userId") Long userId);
 
     @Update("UPDATE notifications SET is_read = true WHERE user_id = #{userId} AND id = #{id}")
-    void markNotificationAsRead(@Param("userId") int userId, @Param("id") int id);
+    void markNotificationAsRead(@Param("userId") Long userId, @Param("id") Long id);
 
     @Insert("INSERT INTO notifications (user_id, title, content, icon_url) " +
             "VALUES (#{userId}, #{title}, #{content}, #{iconUrl})")
@@ -37,12 +37,12 @@ public interface NotificationRepo {
     NotificationFavorite getFavoriteNotification(@Param("productId") Long productId);
 
     @Update("UPDATE notifications SET product_id = #{productId} WHERE id = #{id}")
-    int insertProductId(@Param("productId") int productId, @Param("id") int id);
+    Long insertProductId(@Param("productId") Long productId, @Param("id") Long id);
 
     @Select("SELECT * FROM notifications WHERE id = #{id}")
-    Notification findById(@Param("id") int id);
+    Notification findById(@Param("id") Long id);
 
     @Select("SELECT product_id FROM notifications WHERE id = #{id}")
-    Integer getProductIdByNoId(@Param("id") int id); // Changed from int to Integer
+    Long getProductIdByNoId(@Param("id") Long id); // Changed from int to Integer
 
 }

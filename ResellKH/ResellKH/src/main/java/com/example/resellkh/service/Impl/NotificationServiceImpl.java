@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -20,7 +19,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public Notification createNotification(NotificationRequest request) {
         Notification notification = new Notification();
-        notification.setUserId(request.getUserId());
+        notification.setUserId((long) request.getUserId());
         notification.setContent(request.getContent());
         notification.setCreatedAt(LocalDateTime.now());
         notificationRepo.createNotification(notification);
@@ -28,18 +27,18 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public Notification getNotificationByUserId(int userId) {
+    public Notification getNotificationByUserId(Long userId) {
         List<Notification> notifications = notificationRepo.getNotificationsByUserId(userId);
         return notifications.isEmpty() ? null : notifications.get(0);
     }
 
     @Override
-    public List<Notification> getAllNotificationsByUserId(int userId) {
+    public List<Notification> getAllNotificationsByUserId(Long userId) {
         return notificationRepo.getAllNotificationsByUserId(userId);
     }
 
     @Override
-    public void markNotificationAsRead(int userId, int id) {
+    public void markNotificationAsRead(Long userId, Long id) {
         notificationRepo.markNotificationAsRead(userId, id);
     }
 
@@ -54,13 +53,13 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public int insertproductId(int productId, int id) {
-        return notificationRepo.insertProductId(productId, id);
+    public Long insertproductId(Long productId, Long id) {
+        return (long) notificationRepo.insertProductId(productId, id);
     }
 
     @Override
-    public Integer getProductIdByNoId(int id) { // Changed from int to Integer
-        return notificationRepo.getProductIdByNoId(id);
+    public Long getProductIdByNoId(Long id) { // Changed from int to Integer
+        return Long.valueOf(notificationRepo.getProductIdByNoId(id));
     }
 
 }

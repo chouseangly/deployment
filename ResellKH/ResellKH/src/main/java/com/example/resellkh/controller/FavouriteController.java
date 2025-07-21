@@ -29,15 +29,15 @@ public class FavouriteController {
         Long productId = Long.valueOf(favouriteRequest.getProductId());
         NotificationFavorite notificationFavorite = notificationService.favoriteNotification(productId);
         Notification notification = Notification.builder()
-                .userId(favourite.getUserId())
+                .userId(Long.valueOf(favourite.getUserId()))
                 .title("Favourite")
                 .content(notificationFavorite.getDescription())
                 .iconUrl(notificationFavorite.getProfileImage())
                 .build();
         notificationService.createNotificationWithType(notification);
         int intProductId = productId.intValue();
-        int generatedNotificationId = notification.getId();
-        notificationService.insertproductId(intProductId, generatedNotificationId);
+        Long generatedNotificationId = notification.getId();
+        notificationService.insertproductId((long) intProductId, (long) generatedNotificationId);
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 new ApiResponse<>(
                         "Add favourite successfully",

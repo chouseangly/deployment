@@ -9,11 +9,11 @@ import java.util.List;
 public interface NotificationService {
     Notification createNotification(NotificationRequest request);
 
-    Notification getNotificationByUserId(int userId);
-    List<Notification> getAllNotificationsByUserId(int userId);
-    void markNotificationAsRead(int userId, int id);
+    Notification getNotificationByUserId(Long userId);
+    List<Notification> getAllNotificationsByUserId(Long userId);
+    void markNotificationAsRead(Long userId, Long id);
     void createNotificationWithType(Notification notification);
     NotificationFavorite favoriteNotification(Long productId);
-    int insertproductId(int productId, int id);
-    Integer getProductIdByNoId(int id);
+    Long insertproductId(Long productId, Long id);
+    Long getProductIdByNoId(Long id);
 }

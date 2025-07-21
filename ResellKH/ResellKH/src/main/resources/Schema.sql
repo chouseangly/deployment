@@ -423,7 +423,7 @@ SELECT id, product_id FROM notifications WHERE user_id = 6;
 
 
 
-
+SELECT product_id FROM notifications WHERE id = 543;
 
 
 
