@@ -24,24 +24,23 @@ public class FavouriteServiceImpl implements FavouriteService {
         return favouriteRepo.addFavourite(favouriteRequest);
     }
 
-
-
     @Override
-    public Favourite removeFavourite(Integer userId, Integer productId) {
-        List<Favourite> list = favouriteRepo.getFavourites(userId, productId);
-        if (list == null || list.isEmpty()) return null;
-
-        favouriteRepo.removeFavourite(userId, productId);
-        return list.get(0);
+    public Favourite removeFavourite(Long userId, Long productId) {
+        return favouriteRepo.removeFavourite(userId, productId);
     }
+
     @Override
-    public boolean isFavourite(Integer userId, Integer productId) {
+    public boolean isFavourite(Long userId, Long productId) {
         return favouriteRepo.isFavourite(userId, productId);
     }
 
     @Override
-    public List<Favourite> getFavouritesWithProductsByUserId(Integer userId) {
+    public List<Favourite> getFavouritesWithProductsByUserId(Long userId) {
         return favouriteRepo.getFavouritesWithProductByUserId(userId);
     }
 
+    @Override
+    public List<Long> getUserIdByProductId(Long productId) {
+        return favouriteRepo.findUserIdsByProductId(productId);
+    }
 }

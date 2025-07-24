@@ -1,3 +1,4 @@
+// chouseangly/deployment/deployment-main/ResellKH/ResellKH/src/main/java/com/example/resellkh/model/entity/Auth.java
 package com.example.resellkh.model.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
@@ -18,7 +19,7 @@ import java.util.Collections;
 @Builder
 public class Auth implements UserDetails {
 
-    private Integer userId;
+    private Long userId;
     private String firstName;
     private String lastName;
     private String userName;
@@ -55,7 +56,7 @@ public class Auth implements UserDetails {
     public boolean isCredentialsNonExpired() { return true; }
 
     @Override
-    public boolean isEnabled() { return true; }
+    public boolean isEnabled() { return enabled; }
 
     public String getUserName() {
         return userName;

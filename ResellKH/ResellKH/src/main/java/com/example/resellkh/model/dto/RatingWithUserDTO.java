@@ -10,9 +10,9 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 public class RatingWithUserDTO {
-    private int ratingId;
-    private int ratedUserId;
-    private int ratingUserId;
+    private Long ratingId; // Changed from int
+    private Long ratedUserId; // Changed from int
+    private Long ratingUserId; // Changed from int
     private double score;
     private String comment;
     private LocalDateTime createdAt;

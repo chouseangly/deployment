@@ -11,9 +11,8 @@ public interface ProductHistoryRepo {
     void addHistory(ProductHistory history);
 
     @Select("SELECT * FROM product_history WHERE product_id = #{productId} ORDER BY updated_at DESC")
-    List<ProductHistory> getHistoryByProductId(Integer productId);
-    @Select("""
-    SELECT * FROM product_history
-""")
+    List<ProductHistory> getHistoryByProductId(Long productId);
+
+    @Select("SELECT * FROM product_history")
     List<ProductHistory> getAllProductHistory();
 }

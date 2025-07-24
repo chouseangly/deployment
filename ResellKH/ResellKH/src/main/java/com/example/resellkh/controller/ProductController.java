@@ -1,10 +1,16 @@
 package com.example.resellkh.controller;
 
 import com.example.resellkh.model.dto.ApiResponse;
+import com.example.resellkh.model.dto.NotificationFavorite;
 import com.example.resellkh.model.dto.ProductRequest;
 import com.example.resellkh.model.dto.ProductWithFilesDto;
+import com.example.resellkh.model.entity.Notification;
+import com.example.resellkh.model.entity.Product;
 import com.example.resellkh.model.entity.ProductDraft;
+import com.example.resellkh.repository.ProductRepo;
+import com.example.resellkh.service.FavouriteService;
 import com.example.resellkh.service.Impl.ProductServiceImpl;
+import com.example.resellkh.service.NotificationService;
 import com.example.resellkh.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -23,6 +29,9 @@ public class ProductController {
 
     private final ProductService productService;
     private final ProductServiceImpl productServiceImpl;
+    private final FavouriteService favouriteService;
+    private final NotificationService notificationService;
+    private final ProductRepo productRepo;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ProductWithFilesDto>> uploadProductWithCategoryName(
@@ -40,7 +49,6 @@ public class ProductController {
             @RequestParam("telegramUrl") String telegramUrl,
             @RequestPart("files") MultipartFile[] files
     ) {
-        // Require files only if productStatus is NOT "DRAFT"
         if (!"DRAFT".equalsIgnoreCase(productStatus)) {
             if (files == null || files.length < 1) {
                 return ResponseEntity.badRequest().body(
@@ -58,6 +66,14 @@ public class ProductController {
                 discountPercent, productStatus, description, location, latitude, longitude, condition, telegramUrl);
 
         ProductWithFilesDto product = productService.uploadProductWithCategoryName(request, files);
+        Notification notification = Notification.builder()
+                .userId(userId)
+                .productId(product.getProductId()) // CRITICAL: The productId is now part of the initial object.
+                .title("Add Product")
+                .content("You success fully upload product name : "+ productName)
+                .iconUrl("https://gateway.pinata.cloud/ipfs/QmdMXVZ9KCiNGMwFHxkPMfpUfeGL8QQpMoENKeR5NKJ51F")
+                .build();
+        notificationService.createNotificationWithType(notification);
 
         return ResponseEntity.ok(
                 new ApiResponse<>(
@@ -68,7 +84,6 @@ public class ProductController {
                 )
         );
     }
-
 
     @PutMapping(value = "/updateproduct/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ProductWithFilesDto>> updateProduct(
@@ -88,20 +103,10 @@ public class ProductController {
             @RequestParam(value = "updated_at", required = false) LocalDateTime updatedAt,
             @RequestParam(value = "files", required = false) MultipartFile[] files
     ) {
-        // Convert location to lat/lng if provided
-//        Double latitude = null;
-//        Double longitude = null;
-//
-//        if (location != null && !location.isEmpty()) {
-//            double[] latLng = getLatLngFromLocation(location);
-//            if (latLng == null) {
-//                return ResponseEntity.badRequest().body(
-//                        new ApiResponse<>("Invalid location. Could not determine coordinates.", null, HttpStatus.BAD_REQUEST.value(), LocalDateTime.now())
-//                );
-//            }
-//            latitude = latLng[0];
-//            longitude = latLng[1];
-//        }
+
+        Double previousDiscount = productService.getDiscountPercentByProductId(id);
+        Double newDiscount = discountPercent;
+        List<Long> favoriter = favouriteService.getUserIdByProductId(id);
 
         ProductRequest request = new ProductRequest(
                 productName,
@@ -124,6 +129,35 @@ public class ProductController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     new ApiResponse<>("Product not found", null, HttpStatus.NOT_FOUND.value(), LocalDateTime.now())
             );
+        }
+
+        Notification notification1 = Notification.builder()
+                .userId(userId)
+                .productId(id)
+                .title("Update Product")
+                .content("You successfully Update Product name : " + productName)
+                .iconUrl("https://gateway.pinata.cloud/ipfs/QmdMXVZ9KCiNGMwFHxkPMfpUfeGL8QQpMoENKeR5NKJ51F")
+                .build();
+        notificationService.createNotificationWithType(notification1);
+
+        if (previousDiscount < newDiscount) {
+            for (Long userIdOfFavoriter : favoriter) {
+                String message = "Dear customer, The product you favorited has been updated with a higher discount!. Your favorite product \" " + productName + " \" have new discount with " + newDiscount + " %";
+                NotificationFavorite notificationFavorite = notificationService.favoriteNotification(id);
+
+                // Step 3: Build the notification object, including the productId from the start.
+                Notification notification = Notification.builder()
+                        .userId(userIdOfFavoriter)
+                        .productId(id) // CRITICAL: The productId is now part of the initial object.
+                        .title("Favourite")
+                        .content(message)
+                        .iconUrl(notificationFavorite.getProfileImage())
+                        .build();
+
+                // Step 4: Create the complete notification in a single, safe database call.
+                notificationService.createNotificationWithType(notification);
+
+            }
         }
 
         return ResponseEntity.ok(
@@ -205,7 +239,17 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductWithFilesDto>> deleteProduct(@PathVariable Long id) {
+        Product product = productRepo.findById(id);
+        Notification notification = Notification.builder()
+                .userId(product.getUserId())
+                .productId(product.getProductId())
+                .title("Delete Product")
+                .content("You success fully delete product name : "+product.getProductName())
+                .iconUrl("https://gateway.pinata.cloud/ipfs/QmdMXVZ9KCiNGMwFHxkPMfpUfeGL8QQpMoENKeR5NKJ51F")
+                .build();
+        notificationService.createNotificationWithType(notification);
         ProductWithFilesDto deletedProduct = productServiceImpl.deleteProductAndReturnDto(id);
+        notificationService.deleteAllNotificationByProductId(id);
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 new ApiResponse<>(

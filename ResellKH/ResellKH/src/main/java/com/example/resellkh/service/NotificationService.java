@@ -16,4 +16,5 @@ public interface NotificationService {
     NotificationFavorite favoriteNotification(Long productId);
     Long insertproductId(Long productId, Long id);
     Long getProductIdByNoId(Long id);
+    void deleteAllNotificationByProductId(Long productId);
 }

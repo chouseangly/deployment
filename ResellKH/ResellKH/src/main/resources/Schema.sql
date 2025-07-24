@@ -419,13 +419,16 @@ ALTER TABLE notifications DROP COLUMN type_id;
 ALTER TABLE notifications ADD COLUMN icon_url VARCHAR(255);
 ALTER TABLE notifications ADD COLUMN product_id INTEGER DEFAULT NULL;
 
-SELECT id, product_id FROM notifications WHERE user_id = 6;
-
-
+SELECT id, product_id FROM notifications WHERE user_id = 23;
+DELETE FROM notifications
+WHERE title = 'Favourite' AND product_id IS NULL;
 
 SELECT product_id FROM notifications WHERE id = 543;
 
+DELETE FROM  notifications
+WHERE title = 'Favourite' AND product_id IS NULL;
 
+ALTER TABLE product_images ADD COLUMN content_type VARCHAR(100);
 
 
 

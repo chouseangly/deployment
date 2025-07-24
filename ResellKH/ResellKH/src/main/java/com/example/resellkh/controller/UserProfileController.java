@@ -1,7 +1,9 @@
 package com.example.resellkh.controller;
 
 import com.example.resellkh.model.dto.ApiResponse;
+import com.example.resellkh.model.entity.Notification;
 import com.example.resellkh.model.entity.UserProfile;
+import com.example.resellkh.service.NotificationService;
 import com.example.resellkh.service.UserProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -14,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 
@@ -23,6 +26,7 @@ import java.util.List;
 public class UserProfileController {
 
     private final UserProfileService profileService;
+    private NotificationService notificationService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<UserProfile>> createUserProfile(
@@ -63,6 +67,16 @@ public class UserProfileController {
             UserProfile updated = profileService.updateUserProfileWithImage(
                     userId, gender, phoneNumber, birthday, address, telegramUrl,
                     slogan, userName, firstName, lastName, profileImage, coverImage);
+            // Inside your code
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            String formattedDateTime = LocalDateTime.now().format(formatter);
+            Notification notification = Notification.builder()
+                    .userId(userId)
+                    .title("Update Profile")
+                    .content("You successfully update profile at "+ formattedDateTime)
+                    .iconUrl("https://gateway.pinata.cloud/ipfs/QmdMXVZ9KCiNGMwFHxkPMfpUfeGL8QQpMoENKeR5NKJ51F")
+                    .build();
+            notificationService.createNotificationWithType(notification);
             return ResponseEntity.ok(new ApiResponse<>("User profile updated successfully", updated, HttpStatus.OK.value(), LocalDateTime.now()));
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

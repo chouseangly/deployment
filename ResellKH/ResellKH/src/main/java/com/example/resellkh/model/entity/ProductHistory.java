@@ -7,8 +7,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductHistory {
-    private Integer id;
-    private Integer productId;
+    private Long id; // Changed from Integer
+    private Long productId; // Changed from Integer
     private String message;
     private LocalDateTime updatedAt;
 }

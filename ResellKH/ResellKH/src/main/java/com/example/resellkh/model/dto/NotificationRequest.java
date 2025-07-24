@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class NotificationRequest {
-    private int userId;
+    private Long userId; // Changed from int
     private String Content;
 }

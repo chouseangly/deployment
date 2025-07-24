@@ -4,6 +4,7 @@ import com.example.resellkh.model.dto.ApiResponse;
 import com.example.resellkh.model.entity.Notification;
 import com.example.resellkh.service.Impl.NotificationServiceImpl;
 import lombok.RequiredArgsConstructor;
+import org.apache.ibatis.annotations.Delete;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -69,4 +70,9 @@ public class NotificationController {
         );
     }
 
+    @DeleteMapping("/deleteallnotificationbyproductid/{productId}")
+    public ResponseEntity<String> deleteAllNotificationsByProductId(@PathVariable Long productId) {
+        notificationServiceImpl.deleteAllNotificationByProductId(productId);
+        return ResponseEntity.ok("All notifications for product ID " + productId + " have been deleted.");
+    }
 }

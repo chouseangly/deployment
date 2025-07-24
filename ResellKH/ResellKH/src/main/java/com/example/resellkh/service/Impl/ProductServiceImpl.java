@@ -97,17 +97,21 @@ public class ProductServiceImpl implements ProductService {
                 throw new RuntimeException("Product insertion failed - no ID generated");
             }
 
-            productHistoryService.recordHistory(product.getProductId().intValue(), "Product created");
+            productHistoryService.recordHistory((long) product.getProductId().intValue(), "Product created");
 
             // Process files
             List<String> fileUrls = new ArrayList<>();
             for (MultipartFile file : limitedFiles) {
                 String ipfsUrl = uploadFileToPinata(file);
+                String contentType = file.getContentType();
                 ProductFile productFile = new ProductFile();
                 productFile.setProductId(product.getProductId());
                 productFile.setFileUrl(ipfsUrl);
+                productFile.setContentType(contentType);
                 fileRepo.insertProductFile(productFile);
-                fileUrls.add(ipfsUrl);
+                if (contentType != null && contentType.startsWith("image/")) {
+                    fileUrls.add(ipfsUrl);
+                }
             }
 
             // Save embedding if files exist
@@ -146,7 +150,7 @@ public class ProductServiceImpl implements ProductService {
             if (request.getTelegramUrl() != null) existing.setTelegramUrl(request.getTelegramUrl());
 
             productRepo.updateProduct(existing);
-            productHistoryService.recordHistory(id.intValue(), "Product updated");
+            productHistoryService.recordHistory((long) id.intValue(), "Product updated");
 
             // Process files if provided
             if (files != null && files.length > 0) {
@@ -316,7 +320,7 @@ public class ProductServiceImpl implements ProductService {
             if (product == null) return null;
 
             ProductWithFilesDto dto = mapToDto(product);
-            productHistoryService.recordHistory(productId.intValue(), "Product deleted");
+            productHistoryService.recordHistory((long) productId.intValue(), "Product deleted");
             fileRepo.deleteFilesByProductId(productId);
             productRepo.deleteProduct(productId);
             return dto;
@@ -736,7 +740,7 @@ public class ProductServiceImpl implements ProductService {
         productRepo.insertProduct(product); // Insert product, new productId will be set
 
         // Record product history
-        productHistoryService.recordHistory(product.getProductId().intValue(), "Product published from draft");
+        productHistoryService.recordHistory((long) product.getProductId().intValue(), "Product published from draft");
 
         // Copy files from draft_images to product_images
         List<ProductDraftFile> draftFiles = draftProductFileRepo.findByDraftId(draftId);
@@ -774,5 +778,10 @@ public class ProductServiceImpl implements ProductService {
             draftFile.setUrl(url);
             draftProductFileRepo.insertDraftProductFile(draftFile);
         }
+    }
+
+    @Override
+    public Double getDiscountPercentByProductId(Long productId) {
+        return productRepo.getDiscountPercent(productId);
     }
 }

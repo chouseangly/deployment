@@ -22,7 +22,7 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setUserId((long) request.getUserId());
         notification.setContent(request.getContent());
         notification.setCreatedAt(LocalDateTime.now());
-        notificationRepo.createNotification(notification);
+        notificationRepo.createNotificationWithType(notification);
         return notification;
     }
 
@@ -54,12 +54,18 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public Long insertproductId(Long productId, Long id) {
-        return (long) notificationRepo.insertProductId(productId, id);
+        return (long) notificationRepo.getProductIdByNoId(productId);
     }
 
     @Override
     public Long getProductIdByNoId(Long id) { // Changed from int to Integer
         return Long.valueOf(notificationRepo.getProductIdByNoId(id));
     }
+
+    @Override
+    public void deleteAllNotificationByProductId(Long productId) {
+        notificationRepo.deleteAllNotificationsByProductId(productId);
+    }
+
 
 }

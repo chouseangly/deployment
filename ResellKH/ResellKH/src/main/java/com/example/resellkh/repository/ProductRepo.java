@@ -303,4 +303,7 @@ public interface ProductRepo {
     @Select("SELECT * FROM products WHERE product_id = #{productId}")
 
     Product findByDraftId(Long draftId);
+
+    @Select("SELECT discount_percent FROM products WHERE product_id = #{productId}")
+    Double getDiscountPercent(@Param("productId") Long productId);
 }

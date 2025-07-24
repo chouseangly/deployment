@@ -1,3 +1,4 @@
+// chouseangly/deployment/deployment-main/ResellKH/ResellKH/src/main/java/com/example/resellkh/repository/NotificationRepo.java
 package com.example.resellkh.repository;
 
 import com.example.resellkh.model.dto.NotificationFavorite;
@@ -9,40 +10,34 @@ import java.util.List;
 @Mapper
 public interface NotificationRepo {
 
-    @Insert("INSERT INTO notifications (user_id, content) VALUES (#{userId}, #{content})")
+    /**
+     * ✅ FIX: Added the 'product_id' column to the INSERT statement.
+     * This allows the notification to be created with its product link in one step.
+     */
+    @Insert("INSERT INTO notifications (user_id, product_id, title, content, icon_url) " +
+            "VALUES (#{userId}, #{productId}, #{title}, #{content}, #{iconUrl})")
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
-    void createNotification(Notification notification);
+    void createNotificationWithType(Notification notification);
+
 
     @Select("SELECT * FROM notifications WHERE user_id = #{userId} ORDER BY created_at DESC")
     List<Notification> getNotificationsByUserId(@Param("userId") Long userId);
 
-    @Select("SELECT n.id, n.user_id, n.title, n.content, n.is_read, n.created_at, n.updated_at, n.icon_url " +
-            "FROM notifications n  WHERE n.user_id = #{userId} ORDER BY n.created_at DESC ")
+    @Select("SELECT n.* FROM notifications n WHERE n.user_id = #{userId} ORDER BY n.created_at DESC")
     List<Notification> getAllNotificationsByUserId(@Param("userId") Long userId);
 
     @Update("UPDATE notifications SET is_read = true WHERE user_id = #{userId} AND id = #{id}")
     void markNotificationAsRead(@Param("userId") Long userId, @Param("id") Long id);
 
-    @Insert("INSERT INTO notifications (user_id, title, content, icon_url) " +
-            "VALUES (#{userId}, #{title}, #{content}, #{iconUrl})")
-    @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
-    void createNotificationWithType(Notification notification);
-
-    @Select(("SELECT " +
-            "    p.description ," +
-            "    up.profile_image " +
-            "FROM products p " +
-            "LEFT JOIN user_profile up ON p.user_id = up.user_id\n " +
-            "WHERE p.product_id = #{productId}"))
+    @Select("SELECT p.description, up.profile_image FROM products p " +
+            "LEFT JOIN user_profile up ON p.user_id = up.user_id " +
+            "WHERE p.product_id = #{productId}")
     NotificationFavorite getFavoriteNotification(@Param("productId") Long productId);
 
-    @Update("UPDATE notifications SET product_id = #{productId} WHERE id = #{id}")
-    Long insertProductId(@Param("productId") Long productId, @Param("id") Long id);
-
-    @Select("SELECT * FROM notifications WHERE id = #{id}")
-    Notification findById(@Param("id") Long id);
-
     @Select("SELECT product_id FROM notifications WHERE id = #{id}")
-    Long getProductIdByNoId(@Param("id") Long id); // Changed from int to Integer
+    Long getProductIdByNoId(@Param("id") Long id);
+
+    @Delete("DELETE FROM notifications WHERE product_id = #{productId}")
+    void deleteAllNotificationsByProductId(@Param("productId") Long productId);
 
 }

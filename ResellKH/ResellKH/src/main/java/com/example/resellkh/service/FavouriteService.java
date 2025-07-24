@@ -7,8 +7,8 @@ import java.util.List;
 
 public interface FavouriteService {
     Favourite addFavourite(FavouriteRequest favouriteRequest);
-    Favourite removeFavourite(Integer userId, Integer productId);
-    boolean isFavourite(Integer userId, Integer productId);
-
-    List<Favourite> getFavouritesWithProductsByUserId(Integer userId);
+    Favourite removeFavourite(Long userId, Long productId);
+    boolean isFavourite(Long userId, Long productId);
+    List<Favourite> getFavouritesWithProductsByUserId(Long userId);
+    List<Long> getUserIdByProductId(Long productId);
 }

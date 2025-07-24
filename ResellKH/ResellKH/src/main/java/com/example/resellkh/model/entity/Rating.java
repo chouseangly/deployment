@@ -10,12 +10,10 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Data
 public class Rating {
-    private int ratingId;
-    private int ratedUserId;
-    private int ratingUserId;
+    private Long ratingId; // Changed from int
+    private Long ratedUserId; // Changed from int
+    private Long ratingUserId; // Changed from int
     private double score;
     private String comment;
     private LocalDateTime createdAt;
-    private String reviewerName;
-    private String reviewerAvatar;
 }

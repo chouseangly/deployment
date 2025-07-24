@@ -1,6 +1,5 @@
 package com.example.resellkh.service.Impl;
 
-
 import com.example.resellkh.model.entity.ProductHistory;
 import com.example.resellkh.repository.ProductHistoryRepo;
 import com.example.resellkh.service.ProductHistoryService;
@@ -15,10 +14,9 @@ import java.util.List;
 public class ProductHistoryServiceImpl implements ProductHistoryService {
 
     private final ProductHistoryRepo historyRepo;
-    private final ProductHistoryRepo productHistoryRepo;
 
     @Override
-    public void recordHistory(Integer productId, String message) {
+    public void recordHistory(Long productId, String message) {
         ProductHistory history = new ProductHistory();
         history.setProductId(productId);
         history.setMessage(message);
@@ -27,12 +25,12 @@ public class ProductHistoryServiceImpl implements ProductHistoryService {
     }
 
     @Override
-    public List<ProductHistory> getHistory(Integer productId) {
+    public List<ProductHistory> getHistory(Long productId) {
         return historyRepo.getHistoryByProductId(productId);
     }
 
     @Override
     public List<ProductHistory> getAllProductHistory() {
-        return productHistoryRepo.getAllProductHistory();
+        return historyRepo.getAllProductHistory();
     }
 }

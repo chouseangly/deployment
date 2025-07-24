@@ -11,4 +11,5 @@ public class ProductFile {
     private Long id;
     private Long productId;
     private String fileUrl;
+    private String contentType;
 }

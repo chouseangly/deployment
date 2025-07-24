@@ -43,4 +43,6 @@ public interface ProductService {
     ProductDraft publishDraftProduct(Long draftId); // This method is key for publishing
 
     ProductWithFilesDto deleteProductAndReturnDto(Long id);
+
+    Double getDiscountPercentByProductId(Long productId);
 }
