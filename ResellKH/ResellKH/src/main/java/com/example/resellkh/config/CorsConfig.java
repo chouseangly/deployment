@@ -16,7 +16,7 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
         config.setAllowedOrigins(List.of(
-                "https://comics-upset-dj-clause.trycloudflare.com",
+                " https://trivia-worlds-wichita-stan.trycloudflare.com",
                 "http://localhost:3000"
         ));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "*"));

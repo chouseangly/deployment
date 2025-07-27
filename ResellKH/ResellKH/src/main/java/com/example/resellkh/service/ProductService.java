@@ -45,4 +45,6 @@ public interface ProductService {
     ProductWithFilesDto deleteProductAndReturnDto(Long id);
 
     Double getDiscountPercentByProductId(Long productId);
+
+    boolean deleteProductFileByUrl(Long productId, String fileUrl);
 }

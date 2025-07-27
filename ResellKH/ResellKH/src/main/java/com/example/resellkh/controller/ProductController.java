@@ -164,6 +164,29 @@ public class ProductController {
                 new ApiResponse<>("Product updated successfully", updatedProduct, HttpStatus.OK.value(), LocalDateTime.now())
         );
     }
+    // In chouseangly/deployment/deployment-main/ResellKH/ResellKH/src/main/java/com/example/resellkh/controller/ProductController.java
+
+    @DeleteMapping("/{productId}/files")
+    public ResponseEntity<ApiResponse<String>> deleteProductFile(
+            @PathVariable Long productId,
+            @RequestParam("fileUrl") String fileUrl) {
+        try {
+            boolean deleted = productService.deleteProductFileByUrl(productId, fileUrl);
+            if (deleted) {
+                return ResponseEntity.ok(
+                        new ApiResponse<>("File deleted successfully", null, HttpStatus.OK.value(), LocalDateTime.now())
+                );
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                        new ApiResponse<>("File not found or could not be deleted", null, HttpStatus.NOT_FOUND.value(), LocalDateTime.now())
+                );
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    new ApiResponse<>(e.getMessage(), null, HttpStatus.INTERNAL_SERVER_ERROR.value(), LocalDateTime.now())
+            );
+        }
+    }
 
 
     private double[] getLatLngFromLocation(String location) {

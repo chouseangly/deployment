@@ -23,4 +23,7 @@ public interface ProductFileRepo {
 
     @Delete("DELETE FROM product_images WHERE product_id = #{productId}")
     void deleteFilesByProductId(Long productId);
+
+    @Delete("DELETE FROM product_images WHERE product_id = #{productId} AND url = #{fileUrl}")
+    int deleteFileByProductIdAndUrl(@Param("productId") Long productId, @Param("fileUrl") String fileUrl);;
 }
