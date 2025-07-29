@@ -60,27 +60,22 @@ public class ProductServiceImpl implements ProductService {
     private static final String PINATA_URL = "https://api.pinata.cloud/pinning/pinFileToIPFS";
     private static final String PYTHON_VECTOR_URL = "https://dog-indices-thai-condition.trycloudflare.com/extract-vector";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     @Transactional
     @Override
     public ProductWithFilesDto uploadProductWithCategoryName(ProductRequest request, MultipartFile[] files) {
         try {
-            // Validate files
             if (files == null || files.length < 1) {
                 throw new IllegalArgumentException("You must upload at least 1 image/video file.");
             }
 
-            // Limit files to 5
             MultipartFile[] limitedFiles = files.length > 5 ? Arrays.copyOfRange(files, 0, 5) : files;
 
-            // Create product and set properties
             Product product = new Product();
-            // Copy non-reserved properties
             BeanUtils.copyProperties(request, product);
-            // Explicitly set reserved keyword field and ensure it's not null
             product.setCondition(request.getCondition() != null ? request.getCondition() : "new");
             product.setCreatedAt(LocalDateTime.now());
 
-            // Set defaults for nullable fields
             if (product.getDiscountPercent() == null) product.setDiscountPercent(0.0);
             if (product.getProductStatus() == null) product.setProductStatus("");
             if (product.getDescription() == null) product.setDescription("");
@@ -89,34 +84,29 @@ public class ProductServiceImpl implements ProductService {
             if (product.getLongitude() == null) product.setLongitude(0.0);
             if (product.getTelegramUrl() == null) product.setTelegramUrl("");
 
-            // Insert product
             productRepo.insertProduct(product);
 
-            // Verify insertion
             if (product.getProductId() == null) {
                 throw new RuntimeException("Product insertion failed - no ID generated");
             }
 
-            productHistoryService.recordHistory((long) product.getProductId().intValue(), "Product created");
+            productHistoryService.recordHistory(product.getProductId(), "Product created");
 
-            // Process files
-            List<String> fileUrls = new ArrayList<>();
+            boolean firstImage = true;
             for (MultipartFile file : limitedFiles) {
                 String ipfsUrl = uploadFileToPinata(file);
                 String contentType = file.getContentType();
+
                 ProductFile productFile = new ProductFile();
                 productFile.setProductId(product.getProductId());
                 productFile.setFileUrl(ipfsUrl);
                 productFile.setContentType(contentType);
                 fileRepo.insertProductFile(productFile);
-                if (contentType != null && contentType.startsWith("image/")) {
-                    fileUrls.add(ipfsUrl);
-                }
-            }
 
-            // Save embedding if files exist
-            if (!fileUrls.isEmpty()) {
-                saveEmbedding(product.getProductId(), fileUrls.get(0));
+                if (firstImage && contentType != null && contentType.startsWith("image/")) {
+                    saveEmbedding(product.getProductId(), file);
+                    firstImage = false;
+                }
             }
 
             return getProductWithFilesById(product.getProductId());
@@ -126,7 +116,6 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
-    // In chouseangly/deployment/deployment-main/ResellKH/ResellKH/src/main/java/com/example/resellkh/service/Impl/ProductServiceImpl.java
 
     @Override
     @Transactional
@@ -137,29 +126,16 @@ public class ProductServiceImpl implements ProductService {
                 throw new RuntimeException("Product not found with ID: " + id);
             }
 
-            // ✨ FIX: Add a security check to ensure the user owns the product.
             if (request.getUserId() == null || !request.getUserId().equals(existing.getUserId())) {
                 throw new SecurityException("Unauthorized: You do not have permission to edit this product.");
             }
 
-            // ✨ FIX: Explicitly set all fields from the request. This ensures that
-            // sending an empty string for telegramUrl will correctly clear it in the database.
-            existing.setProductName(request.getProductName());
-            existing.setMainCategoryId(request.getMainCategoryId());
-            existing.setProductPrice(request.getProductPrice());
-            existing.setDiscountPercent(request.getDiscountPercent());
-            existing.setProductStatus(request.getProductStatus());
-            existing.setDescription(request.getDescription());
-            existing.setLocation(request.getLocation());
-            existing.setLatitude(request.getLatitude());
-            existing.setLongitude(request.getLongitude());
-            existing.setCondition(request.getCondition());
-            existing.setTelegramUrl(request.getTelegramUrl()); // This will now correctly update to an empty string if provided.
-
+            BeanUtils.copyProperties(request, existing, "userId", "createdAt");
+            existing.setProductId(id);
             productRepo.updateProduct(existing);
+
             productHistoryService.recordHistory(id, "Product details updated.");
 
-            // File handling logic remains unchanged as it is correct.
             if (files != null && files.length > 0) {
                 List<String> existingFileUrls = fileRepo.findUrlsByProductId(id);
                 int remainingSlots = 5 - existingFileUrls.size();
@@ -167,8 +143,9 @@ public class ProductServiceImpl implements ProductService {
                 if (remainingSlots > 0) {
                     int filesToAddCount = Math.min(files.length, remainingSlots);
                     MultipartFile[] filesToAdd = Arrays.copyOfRange(files, 0, filesToAddCount);
-                    List<String> newImageUrls = new ArrayList<>();
+
                     boolean wasFirstEmbeddingDone = productEmbeddingRepo.countByProductId(id) > 0;
+                    boolean firstNewImage = true;
 
                     for (MultipartFile file : filesToAdd) {
                         String ipfsUrl = uploadFileToPinata(file);
@@ -178,13 +155,11 @@ public class ProductServiceImpl implements ProductService {
                         productFile.setFileUrl(ipfsUrl);
                         productFile.setContentType(contentType);
                         fileRepo.insertProductFile(productFile);
-                        if (contentType != null && contentType.startsWith("image/")) {
-                            newImageUrls.add(ipfsUrl);
-                        }
-                    }
 
-                    if (!newImageUrls.isEmpty() && !wasFirstEmbeddingDone) {
-                        saveEmbedding(id, newImageUrls.get(0));
+                        if (!wasFirstEmbeddingDone && firstNewImage && contentType != null && contentType.startsWith("image/")) {
+                            saveEmbedding(id, file);
+                            firstNewImage = false;
+                        }
                     }
                     productHistoryService.recordHistory(id, "Added " + filesToAddCount + " new media file(s).");
                 }
@@ -196,55 +171,40 @@ public class ProductServiceImpl implements ProductService {
             throw new RuntimeException("Failed to update product: " + e.getMessage(), e);
         }
     }
+
     @Override
     public List<ProductWithFilesDto> searchByImageUrl(MultipartFile file) {
         try {
-            String ipfsUrl = uploadFileToPinata(file);
-            List<Double> inputVector = callImageVectorAPI(ipfsUrl);
-
-            List<ProductEmbeddingRepo.ProductEmbeddingRecord> all = productEmbeddingRepo.getAllEmbeddings();
+            List<Double> inputVector = callImageVectorAPI(file);
+            List<ProductEmbeddingRepo.ProductEmbeddingRecord> allEmbeddings = productEmbeddingRepo.getAllEmbeddings();
             List<ProductWithSimilarity> similarities = new ArrayList<>();
 
-            for (ProductEmbeddingRepo.ProductEmbeddingRecord record : all) {
+            for (ProductEmbeddingRepo.ProductEmbeddingRecord record : allEmbeddings) {
                 try {
                     List<Double> targetVector = OBJECT_MAPPER.readValue(record.getVectorJson(), new TypeReference<>() {});
                     double similarity = computeCosineSimilarity(inputVector, targetVector);
                     similarities.add(new ProductWithSimilarity(record.getProductId(), similarity));
                 } catch (IOException e) {
-                    throw new RuntimeException("Failed to parse vector JSON", e);
+                    System.err.println("Error parsing vector for Product ID " + record.getProductId() + ": " + e.getMessage());
                 }
             }
 
             return similarities.stream()
-                    .filter(sim -> sim.similarity > 0.8)
+                    .filter(sim -> sim.similarity > 0.3)
                     .sorted(Comparator.comparingDouble(ProductWithSimilarity::similarity).reversed())
-                    .map(sim -> getProductWithFilesById(sim.productId))
+                    .map(sim -> getProductWithFilesById(sim.productId()))
                     .filter(Objects::nonNull)
                     .limit(10)
                     .collect(Collectors.toList());
+
         } catch (Exception e) {
             throw new RuntimeException("Failed to search by image: " + e.getMessage(), e);
         }
     }
 
-    @Override
-    public List<ProductWithFilesDto> findNearbyProducts(double lat, double lng) {
+    private void saveEmbedding(Long productId, MultipartFile imageFile) {
         try {
-            List<Product> all = productRepo.findNearbyProducts(lat, lng);
-            if (all.isEmpty()) return Collections.emptyList();
-            return all.stream().map(this::mapToDto).collect(Collectors.toList());
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to find nearby products: " + e.getMessage(), e);
-        }
-    }
-
-
-
-    private record ProductWithSimilarity(Long productId, double similarity) {}
-
-    private void saveEmbedding(Long productId, String imageUrl) {
-        try {
-            List<Double> vector = callImageVectorAPI(imageUrl);
+            List<Double> vector = callImageVectorAPI(imageFile);
             String vectorJson = new ObjectMapper().writeValueAsString(vector);
             int count = productEmbeddingRepo.countByProductId(productId);
 
@@ -259,26 +219,21 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
-    // Replace the existing callImageVectorAPI method in your ProductServiceImpl.java
-// with this new version.
-
-    // Replace the existing callImageVectorAPI method in your ProductServiceImpl.java
-// with this new, correct version.
-
-    private List<Double> callImageVectorAPI(String imageUrl) {
+    private List<Double> callImageVectorAPI(MultipartFile file) {
         try {
-            // STEP 1: Create the correct JSON body {"url": "..."} that the Python service expects.
-            // We use a Map to represent the JSON object.
-            Map<String, String> requestBody = Map.of("url", imageUrl);
-
-            // STEP 2: Set the headers to indicate we are sending JSON data.
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
-            // STEP 3: Create the HTTP request entity with the JSON body and headers.
-            HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(requestBody, headers);
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("file", new ByteArrayResource(file.getBytes()) {
+                @Override
+                public String getFilename() {
+                    return file.getOriginalFilename();
+                }
+            });
 
-            // STEP 4: Make the POST request and get the response.
+            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                     PYTHON_VECTOR_URL,
                     HttpMethod.POST,
@@ -290,15 +245,33 @@ public class ProductServiceImpl implements ProductService {
                 throw new RuntimeException("Invalid or empty vector format received from Python service.");
             }
 
-            // Convert the result to a List of Doubles.
             return rawList.stream()
                     .map(val -> Double.valueOf(String.valueOf(val)))
                     .collect(Collectors.toList());
 
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            String errorBody = e.getResponseBodyAsString();
+            throw new RuntimeException("Error from Python service: " + e.getStatusCode() + " - " + errorBody, e);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read file bytes: " + e.getMessage(), e);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to call Python vector service for URL " + imageUrl + ": " + e.getMessage(), e);
+            throw new RuntimeException("A general error occurred while calling the Python vector service: " + e.getMessage(), e);
         }
     }
+
+    @Override
+    public List<ProductWithFilesDto> findNearbyProducts(double lat, double lng) {
+        try {
+            List<Product> all = productRepo.findNearbyProducts(lat, lng);
+            if (all.isEmpty()) return Collections.emptyList();
+            return all.stream().map(this::mapToDto).collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to find nearby products: " + e.getMessage(), e);
+        }
+    }
+
+    private record ProductWithSimilarity(Long productId, double similarity) {}
+
     private double computeCosineSimilarity(List<Double> a, List<Double> b) {
         if (a.size() != b.size()) return 0;
         double dot = 0, normA = 0, normB = 0;
@@ -331,15 +304,15 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
-
     public ProductWithFilesDto deleteProductAndReturnDto(Long productId) {
         try {
             Product product = productRepo.findById(productId);
             if (product == null) return null;
 
             ProductWithFilesDto dto = mapToDto(product);
-            productHistoryService.recordHistory((long) productId.intValue(), "Product deleted");
+            productHistoryService.recordHistory(productId, "Product deleted");
             fileRepo.deleteFilesByProductId(productId);
+            productEmbeddingRepo.deleteByProductId(productId);
             productRepo.deleteProduct(productId);
             return dto;
         } catch (Exception e) {
@@ -408,8 +381,6 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
-
-
     @Override
     public List<ProductWithFilesDto> getAllProductsByStatus(String status) {
         return productRepo.findAllByStatus(status);
@@ -427,7 +398,7 @@ public class ProductServiceImpl implements ProductService {
         draft.setMainCategoryId(mainCategoryId);
         draft.setProductPrice(productPrice);
         draft.setDiscountPercent(discountPercent != null ? discountPercent : 0.0);
-        draft.setProductStatus("DRAFT");  // consistent uppercase draft status
+        draft.setProductStatus("DRAFT");
         draft.setDescription(description != null ? description : "");
         draft.setLocation(location != null ? location : "");
         draft.setLatitude(latitude != null ? latitude : 0.0);
@@ -451,13 +422,11 @@ public class ProductServiceImpl implements ProductService {
                                      String location, Double latitude, Double longitude, String condition,
                                      String telegramUrl, String productStatus, MultipartFile[] files) {
 
-        // 1. Find existing draft
         ProductDraft existing = draftProductFileRepo.findById(draftId);
         if (existing == null) {
             return null;
         }
 
-        // 2. Update all fields
         if (productName != null) existing.setProductName(productName);
         if (mainCategoryId != null) existing.setMainCategoryId(mainCategoryId);
         if (productPrice != null) existing.setProductPrice(productPrice);
@@ -469,21 +438,17 @@ public class ProductServiceImpl implements ProductService {
         if (condition != null) existing.setCondition(condition);
         if (telegramUrl != null) existing.setTelegramUrl(telegramUrl);
 
-        // 3. Handle status update
         if (productStatus != null) {
             existing.setProductStatus(productStatus.trim().toUpperCase());
         }
 
         existing.setUpdatedAt(LocalDateTime.now());
 
-        // 4. Check if we should publish
         if ("ON SALE".equals(existing.getProductStatus())) {
-            // Create new product
             Product product = new Product();
             BeanUtils.copyProperties(existing, product);
             product.setCreatedAt(LocalDateTime.now());
 
-            // Set defaults
             if (product.getDiscountPercent() == null) product.setDiscountPercent(0.0);
             if (product.getDescription() == null) product.setDescription("");
             if (product.getLocation() == null) product.setLocation("");
@@ -492,32 +457,27 @@ public class ProductServiceImpl implements ProductService {
             if (product.getTelegramUrl() == null) product.setTelegramUrl("");
             if (product.getCondition() == null) product.setCondition("NEW");
 
-            // Insert product
             productRepo.insertProduct(product);
 
-            // Transfer files
             List<ProductDraftFile> draftFiles = draftProductFileRepo.findByDraftId(draftId);
-            draftFiles.forEach(draftFile -> {
+            boolean firstImage = true;
+            for(ProductDraftFile draftFile : draftFiles){
                 ProductFile productFile = new ProductFile();
                 productFile.setProductId(product.getProductId());
                 productFile.setFileUrl(draftFile.getUrl());
                 fileRepo.insertProductFile(productFile);
-            });
-
-            // Save embedding
-            if (!draftFiles.isEmpty()) {
-                saveEmbedding(product.getProductId(), draftFiles.get(0).getUrl());
+                if(firstImage){
+                    // Embedding on publish is complex since the file is not available
+                    firstImage = false;
+                }
             }
 
-            // Delete draft
             draftProductFileRepo.deleteDraftFilesByDraftId(draftId);
             draftProductFileRepo.deleteDraftProduct(draftId);
 
-            // Return the new product DTO
             return mapToProductDto(product);
         }
 
-        // 5. Regular draft update
         draftProductFileRepo.updateDraftProduct(existing);
 
         if (files != null && files.length > 0) {
@@ -532,13 +492,11 @@ public class ProductServiceImpl implements ProductService {
         ProductWithFilesDto dto = new ProductWithFilesDto();
         BeanUtils.copyProperties(product, dto);
 
-        // Set file URLs
         dto.setFileUrls(fileRepo.findByProductId(product.getProductId())
                 .stream()
                 .map(ProductFile::getFileUrl)
                 .collect(Collectors.toList()));
 
-        // Set category name
         String categoryName = productRepo.getCategoryNameById(
                 product.getMainCategoryId() != null ?
                         product.getMainCategoryId().intValue() : 0);
@@ -546,6 +504,7 @@ public class ProductServiceImpl implements ProductService {
 
         return dto;
     }
+
     @Override
     public ProductDraft getDraftById(Long draftId) {
         ProductDraft draft = draftProductFileRepo.findById(draftId);
@@ -554,7 +513,7 @@ public class ProductServiceImpl implements ProductService {
         ProductDraft dto = new ProductDraft();
         BeanUtils.copyProperties(draft, dto);
 
-        List<ProductDraftFile> files = draftProductFileRepo.findByDraftId(draftId);  // fixed method name: findByDraftId
+        List<ProductDraftFile> files = draftProductFileRepo.findByDraftId(draftId);
         dto.setFileUrls(files.stream().map(ProductDraftFile::getUrl).collect(Collectors.toList()));
 
         String categoryName = productRepo.getCategoryNameById(
@@ -570,15 +529,13 @@ public class ProductServiceImpl implements ProductService {
                                                           Double productPrice, Double discountPercent, String description,
                                                           String location, Double latitude, Double longitude,
                                                           String condition, String telegramUrl, MultipartFile[] files) {
-        // Find drafts by userId
         List<ProductDraft> drafts = draftProductFileRepo.findByUserId(userId);
         if (drafts == null || drafts.isEmpty()) {
-            return null;  // no draft found
+            return null;
         }
 
-        ProductDraft draft = drafts.get(0); // update the first draft (you can adjust logic)
+        ProductDraft draft = drafts.get(0);
 
-        // Update draft fields if not null
         if (productName != null) draft.setProductName(productName);
         if (mainCategoryId != null) draft.setMainCategoryId(mainCategoryId);
         if (productPrice != null) draft.setProductPrice(productPrice);
@@ -593,43 +550,20 @@ public class ProductServiceImpl implements ProductService {
         draft.setUpdatedAt(LocalDateTime.now());
         draftProductFileRepo.updateDraftProduct(draft);
 
-        // Update draft files if any
         if (files != null && files.length > 0) {
-            draftProductFileRepo.deleteDraftFilesByDraftId(draft.getDraftId()); // Also fixed here for consistency
-            MultipartFile[] limitedFiles = files.length > 5 ? Arrays.copyOfRange(files, 0, 5) : files;
-            for (MultipartFile file : limitedFiles) {
-                String url = uploadFileToPinata(file);
-                ProductDraftFile draftFile = new ProductDraftFile();
-                draftFile.setDraftId(draft.getDraftId());
-                draftFile.setUrl(url);
-                draftProductFileRepo.insertDraftProductFile(draftFile);
-            }
+            draftProductFileRepo.deleteDraftFilesByDraftId(draft.getDraftId());
+            saveFilesForDraft(draft.getDraftId(), files);
         }
 
-        // Check if product exists linked to this draft (implement findByDraftId in ProductRepo)
         Product existingProduct = productRepo.findByDraftId(draft.getDraftId());
 
         if (existingProduct == null) {
-            // Create new product from draft
             Product newProduct = new Product();
-            newProduct.setProductName(draft.getProductName());
-            newProduct.setUserId(draft.getUserId());
-            newProduct.setMainCategoryId(draft.getMainCategoryId());
-            newProduct.setProductPrice(draft.getProductPrice());
-            newProduct.setDiscountPercent(draft.getDiscountPercent());
-            newProduct.setProductStatus("On sale");  // Set status to "On sale"
-            newProduct.setDescription(draft.getDescription());
-            newProduct.setLocation(draft.getLocation());
-            newProduct.setLatitude(draft.getLatitude());
-            newProduct.setLongitude(draft.getLongitude());
-            newProduct.setCondition(draft.getCondition());
-            newProduct.setTelegramUrl(draft.getTelegramUrl());
-            newProduct.setCreatedAt(draft.getCreatedAt());
+            BeanUtils.copyProperties(draft, newProduct);
+            newProduct.setProductStatus("On sale");
             newProduct.setUpdatedAt(LocalDateTime.now());
-
             productRepo.insertProduct(newProduct);
 
-            // Insert product files from draft files
             List<ProductDraftFile> draftFiles = draftProductFileRepo.findByDraftId(draft.getDraftId());
             for (ProductDraftFile draftFile : draftFiles) {
                 ProductFile productFile = new ProductFile();
@@ -638,42 +572,20 @@ public class ProductServiceImpl implements ProductService {
                 fileRepo.insertProductFile(productFile);
             }
 
-            // Delete draft files and draft itself after publishing
-            draftProductFileRepo.deleteDraftFilesByDraftId(draft.getDraftId()); // Also fixed here
+            draftProductFileRepo.deleteDraftFilesByDraftId(draft.getDraftId());
             draftProductFileRepo.deleteDraftProduct(draft.getDraftId());
 
             return getProductWithFilesById(newProduct.getProductId());
-
         } else {
-            // Update existing product from draft info
-            existingProduct.setProductName(draft.getProductName());
-            existingProduct.setMainCategoryId(draft.getMainCategoryId());
-            existingProduct.setProductPrice(draft.getProductPrice());
-            existingProduct.setDiscountPercent(draft.getDiscountPercent());
-            existingProduct.setProductStatus("On sale");  // Set status to "On sale"
-            existingProduct.setDescription(draft.getDescription());
-            existingProduct.setLocation(draft.getLocation());
-            existingProduct.setLatitude(draft.getLatitude());
-            existingProduct.setLongitude(draft.getLongitude());
-            existingProduct.setCondition(draft.getCondition());
-            existingProduct.setTelegramUrl(draft.getTelegramUrl());
-            existingProduct.setUpdatedAt(draft.getUpdatedAt());
-
+            BeanUtils.copyProperties(draft, existingProduct, "draftId", "createdAt");
+            existingProduct.setProductStatus("On sale");
+            existingProduct.setUpdatedAt(LocalDateTime.now());
             productRepo.updateProduct(existingProduct);
 
-            // Update product files
             if (files != null && files.length > 0) {
                 fileRepo.deleteFilesByProductId(existingProduct.getProductId());
-                MultipartFile[] limitedFiles = files.length > 5 ? Arrays.copyOfRange(files, 0, 5) : files;
-                for (MultipartFile file : limitedFiles) {
-                    String url = uploadFileToPinata(file);
-                    ProductFile productFile = new ProductFile();
-                    productFile.setProductId(existingProduct.getProductId());
-                    productFile.setFileUrl(url);
-                    fileRepo.insertProductFile(productFile);
-                }
+                saveFilesForProduct(existingProduct.getProductId(), files);
             } else {
-                // Sync draft files to product files if no new files uploaded
                 List<ProductDraftFile> draftFiles = draftProductFileRepo.findByDraftId(draft.getDraftId());
                 fileRepo.deleteFilesByProductId(existingProduct.getProductId());
                 for (ProductDraftFile draftFile : draftFiles) {
@@ -683,27 +595,35 @@ public class ProductServiceImpl implements ProductService {
                     fileRepo.insertProductFile(productFile);
                 }
             }
-
-            // Delete draft files and draft itself after publishing
-            draftProductFileRepo.deleteDraftFilesByDraftId(draft.getDraftId()); // Also fixed here
+            draftProductFileRepo.deleteDraftFilesByDraftId(draft.getDraftId());
             draftProductFileRepo.deleteDraftProduct(draft.getDraftId());
 
             return getProductWithFilesById(existingProduct.getProductId());
         }
     }
 
+    private void saveFilesForProduct(Long productId, MultipartFile[] files) {
+        if (files == null || files.length == 0) return;
+
+        MultipartFile[] limitedFiles = files.length > 5 ? Arrays.copyOfRange(files, 0, 5) : files;
+        for (MultipartFile file : limitedFiles) {
+            String url = uploadFileToPinata(file);
+            ProductFile productFile = new ProductFile();
+            productFile.setProductId(productId);
+            productFile.setFileUrl(url);
+            fileRepo.insertProductFile(productFile);
+        }
+    }
+
+
     @Transactional
     @Override
     public boolean deleteDraftByUserIdAndDraftId(Long userId, Long draftId) {
         ProductDraft draft = draftProductFileRepo.findById(draftId);
         if (draft == null || !draft.getUserId().equals(userId)) {
-            return false;  // Not found or not authorized
+            return false;
         }
-
-        // Delete draft files first
         draftProductFileRepo.deleteDraftFilesByDraftId(draftId);
-
-        // Delete the draft itself
         draftProductFileRepo.deleteDraftByDraftIdAndUserId(draftId, userId);
 
         return true;
@@ -738,15 +658,12 @@ public class ProductServiceImpl implements ProductService {
         ProductDraft draft = draftProductFileRepo.findById(draftId);
         if (draft == null) return null;
 
-        // Create a new Product from the draft
         Product product = new Product();
-        BeanUtils.copyProperties(draft, product); // Copy common properties
-        product.setProductId(null); // Ensure new ID is generated for the new product
-        product.setProductStatus("On sale"); // Set final status for published product
-        product.setCreatedAt(draft.getCreatedAt()); // Keep original draft creation time
-        product.setUpdatedAt(LocalDateTime.now()); // Set updated time to now (publication time)
+        BeanUtils.copyProperties(draft, product);
+        product.setProductId(null);
+        product.setProductStatus("On sale");
+        product.setUpdatedAt(LocalDateTime.now());
 
-        // Handle nullable fields (ensure default values if source ProductDraft has nulls)
         if (product.getDiscountPercent() == null) product.setDiscountPercent(0.0);
         if (product.getDescription() == null) product.setDescription("");
         if (product.getLocation() == null) product.setLocation("");
@@ -755,41 +672,37 @@ public class ProductServiceImpl implements ProductService {
         if (product.getTelegramUrl() == null) product.setTelegramUrl("");
         if (product.getCondition() == null) product.setCondition("new");
 
-        productRepo.insertProduct(product); // Insert product, new productId will be set
+        productRepo.insertProduct(product);
 
-        // Record product history
-        productHistoryService.recordHistory((long) product.getProductId().intValue(), "Product published from draft");
+        productHistoryService.recordHistory(product.getProductId(), "Product published from draft");
 
-        // Copy files from draft_images to product_images
         List<ProductDraftFile> draftFiles = draftProductFileRepo.findByDraftId(draftId);
-        List<String> publishedFileUrls = new ArrayList<>();
         if (draftFiles != null && !draftFiles.isEmpty()) {
+            boolean firstImage = true;
             for (ProductDraftFile draftFile : draftFiles) {
                 ProductFile productFile = new ProductFile();
                 productFile.setProductId(product.getProductId());
-                productFile.setFileUrl(draftFile.getUrl()); // Reuse existing IPFS URL
+                productFile.setFileUrl(draftFile.getUrl());
                 fileRepo.insertProductFile(productFile);
-                publishedFileUrls.add(draftFile.getUrl());
+                if(firstImage){
+                    // Embedding on publish from draft is complex and unreliable
+                    firstImage = false;
+                }
             }
-            // Save embedding for the first image of the newly published product
-            saveEmbedding(product.getProductId(), publishedFileUrls.get(0));
         }
 
-        // Delete draft files and the draft itself
         draftProductFileRepo.deleteDraftFilesByDraftId(draftId);
         draftProductFileRepo.deleteDraftProduct(draftId);
 
-        // Return the newly published product DTO
         return getProductWithFilesById(product.getProductId());
     }
 
-    // Helper to save files for a draft
     private void saveFilesForDraft(Long draftId, MultipartFile[] files) {
         if (files == null || files.length == 0) return;
 
         MultipartFile[] limitedFiles = files.length > 5 ? Arrays.copyOfRange(files, 0, 5) : files;
         for (MultipartFile file : limitedFiles) {
-            String url = uploadFileToPinata(file); // Upload to Pinata
+            String url = uploadFileToPinata(file);
 
             ProductDraftFile draftFile = new ProductDraftFile();
             draftFile.setDraftId(draftId);
@@ -809,7 +722,6 @@ public class ProductServiceImpl implements ProductService {
             int affectedRows = fileRepo.deleteFileByProductIdAndUrl(productId, fileUrl);
             return affectedRows > 0;
         } catch (Exception e) {
-            // Log the exception for debugging purposes
             System.err.println("Error deleting file from database: " + e.getMessage());
             throw new RuntimeException("Failed to delete file for product ID: " + productId, e);
         }

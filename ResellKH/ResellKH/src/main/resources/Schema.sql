@@ -430,6 +430,9 @@ WHERE title = 'Favourite' AND product_id IS NULL;
 
 ALTER TABLE product_images ADD COLUMN content_type VARCHAR(100);
 
+ALTER TABLE products ADD COLUMN currency VARCHAR(10);
+SELECT * FROM products WHERE product_id > 280;
+
 
 
 

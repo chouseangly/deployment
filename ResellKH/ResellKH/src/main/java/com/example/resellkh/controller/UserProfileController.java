@@ -26,7 +26,7 @@ import java.util.List;
 public class UserProfileController {
 
     private final UserProfileService profileService;
-    private NotificationService notificationService;
+    private final NotificationService notificationService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<UserProfile>> createUserProfile(

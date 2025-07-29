@@ -290,6 +290,7 @@ public class ProductController {
                 new ApiResponse<>("Similar products found", result, HttpStatus.OK.value(), LocalDateTime.now())
         );
     }
+
     @GetMapping("/nearby/{lat}/{lng}")
     public ResponseEntity<ApiResponse<List<ProductWithFilesDto>>> getNearbyProducts(
             @PathVariable double lat,
@@ -509,15 +510,17 @@ public class ProductController {
         );
     }
     @DeleteMapping("/{draftId}/user/{userId}")
-    public ResponseEntity<ApiResponse<String>> deleteDraftByUserIdAndDraftId(
+    public ResponseEntity<ApiResponse<Boolean>> deleteDraftByUserIdAndDraftId(
             @PathVariable Long draftId,
             @PathVariable Long userId) {
 
         boolean deleted = productService.deleteDraftByUserIdAndDraftId(userId, draftId);
 
         if (deleted) {
-            return ResponseEntity.ok(
-                    new ApiResponse<>("Draft deleted successfully", null, HttpStatus.OK.value(), LocalDateTime.now()));
+            return ResponseEntity.status(HttpStatus.OK).body(
+                    new ApiResponse<>("Draft deleted successfully", deleted, HttpStatus.OK.value(), LocalDateTime.now())
+            );
+
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     new ApiResponse<>("Draft not found or unauthorized", null, HttpStatus.NOT_FOUND.value(), LocalDateTime.now()));
