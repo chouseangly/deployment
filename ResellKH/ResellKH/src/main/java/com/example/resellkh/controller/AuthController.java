@@ -133,8 +133,6 @@ public class AuthController {
     }
 
 
-
-
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@RequestParam String email) {
         otpService.sendOtp(email);
@@ -189,6 +187,13 @@ public class AuthController {
         AuthResponse authResponse = authService.registerWithGoogle(googleUserDto);
         Map<String, Object> response = new HashMap<>();
         response.put("payload", authResponse); // <-- Wrap in 'payload'
+        Notification notification = Notification.builder()
+                .userId(authResponse.getUserId())
+                .title("Welcome to ResellKH")
+                .content("Welcome to ResellKH! We’re excited to have you join our community. As a new member, you can explore great deals, post your products, and connect with trusted buyers and sellers. Stay updated with the latest promotions, features, and security tips. Thank you for choosing ResellKH — let’s grow together!")
+                .iconUrl("https://gateway.pinata.cloud/ipfs/QmdMXVZ9KCiNGMwFHxkPMfpUfeGL8QQpMoENKeR5NKJ51F")
+                .build();
+        notificationService.createNotificationWithType(notification);
         return ResponseEntity.ok(response);
     }
 
