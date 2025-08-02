@@ -354,6 +354,9 @@ CREATE TABLE order_items (
                              price DOUBLE PRECISION NOT NULL
 );
 
+delete from users where user_id = 89 ;
+DELETE FROM seller WHERE user_id = 23;
+
 DROP TABLE seller;
 SELECT * FROM seller;
 SELECT * FROM orders;

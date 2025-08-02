@@ -54,6 +54,7 @@ public class OtpServiceImpl implements OtpService {
                     + "<h2 style='color:#333;'>Welcome to <b>ResellKH</b>!</h2>"
                     + "<p>Your OTP code is: " + code + "</p>"
                     + "<p>This code expires in 1 minute.</p>"
+                    +"<p>Please don't send this otp to other people.</p>"
                     + "</body></html>";
 
             helper.setText(htmlContent, true);

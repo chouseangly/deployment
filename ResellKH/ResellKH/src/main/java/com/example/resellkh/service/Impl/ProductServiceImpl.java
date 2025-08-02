@@ -190,7 +190,7 @@ public class ProductServiceImpl implements ProductService {
             }
 
             return similarities.stream()
-                    .filter(sim -> sim.similarity > 0.3)
+                    .filter(sim -> sim.similarity > 0.8)
                     .sorted(Comparator.comparingDouble(ProductWithSimilarity::similarity).reversed())
                     .map(sim -> getProductWithFilesById(sim.productId()))
                     .filter(Objects::nonNull)

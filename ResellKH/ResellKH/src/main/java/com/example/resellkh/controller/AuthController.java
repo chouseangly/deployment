@@ -89,9 +89,9 @@ public class AuthController {
 
 
     @PostMapping("/resend-otp")
-    public ResponseEntity<String> resendOtp(@RequestBody OtpRequest otpRequest) {
+    public ResponseEntity<Map<String, String>> resendOtp(@RequestBody OtpRequest otpRequest) {
         otpService.sendOtp(otpRequest.getEmail());
-        return ResponseEntity.ok("OTP resent successfully.");
+        return ResponseEntity.ok(Map.of("message", "OTP resent successfully."));
     }
 
     @PostMapping("/login")
