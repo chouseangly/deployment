@@ -16,8 +16,10 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
         config.setAllowedOrigins(List.of(
-                "https://trivia-worlds-wichita-stan.trycloudflare.com",
-                "http://localhost:3000"
+                "https://peace-investigation-called-assignment.trycloudflare.com",
+                "http://localhost:3000",
+                "resellkh-deploy.vercel.app",
+                "https://www.resellkh.store"
         ));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));

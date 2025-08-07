@@ -58,7 +58,7 @@ public class ProductServiceImpl implements ProductService {
     private String pinataSecretApiKey;
 
     private static final String PINATA_URL = "https://api.pinata.cloud/pinning/pinFileToIPFS";
-    private static final String PYTHON_VECTOR_URL = "https://dog-indices-thai-condition.trycloudflare.com/extract-vector";
+    private static final String PYTHON_VECTOR_URL = "https://connectors-backed-dinner-virgin.trycloudflare.com/extract-vector";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Transactional
