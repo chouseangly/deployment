@@ -9,15 +9,20 @@ import java.util.List;
 public interface ProductFileRepo {
 
     @Insert("INSERT INTO product_images(product_id, url, content_type) VALUES (#{productId}, #{fileUrl}, #{contentType})")
-    void insertProductFile(ProductFile file);
-
-    @Select("SELECT product_id, url FROM product_images WHERE product_id = #{productId}")
     @Results({
             @Result(property = "productId", column = "product_id"),
-            @Result(property = "fileUrl", column = "url")
+            @Result(property = "fileUrl", column = "url"),
+            @Result(property = "contentType", column = "content_type")
+    })
+    void insertProductFile(ProductFile file);
+
+    @Select("SELECT product_id, url, content_type FROM product_images WHERE product_id = #{productId}")
+    @Results({
+            @Result(property = "productId", column = "product_id"),
+            @Result(property = "fileUrl", column = "url"),
+            @Result(property = "contentType", column = "content_type")
     })
     List<ProductFile> findByProductId(Long productId);
-
     @Select("SELECT url FROM product_images WHERE product_id = #{productId}")
     List<String> findUrlsByProductId(@Param("productId") Long productId);
 

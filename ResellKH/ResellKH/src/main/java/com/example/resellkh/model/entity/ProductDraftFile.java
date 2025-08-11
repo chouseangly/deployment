@@ -11,4 +11,6 @@ public class ProductDraftFile {
     private Long id;
     private Long draftId;
     private String url;
+    private String contentType;
+
 }

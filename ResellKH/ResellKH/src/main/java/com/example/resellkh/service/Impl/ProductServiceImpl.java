@@ -351,8 +351,10 @@ public class ProductServiceImpl implements ProductService {
     private ProductWithFilesDto mapToDto(Product product) {
         ProductWithFilesDto dto = new ProductWithFilesDto();
         BeanUtils.copyProperties(product, dto);
-        dto.setFileUrls(fileRepo.findByProductId(product.getProductId())
-                .stream().map(ProductFile::getFileUrl).collect(Collectors.toList()));
+
+        // ✅ FIX: Instead of setting just the URLs, set the complete list of file objects.
+        // This assumes your DTO has a field `private List<ProductFile> media;`
+        dto.setMedia(fileRepo.findByProductId(product.getProductId()));
 
         String categoryName = productRepo.getCategoryNameById(product.getMainCategoryId().intValue());
         dto.setCategoryName(categoryName != null ? categoryName : "Unknown");
@@ -495,7 +497,9 @@ public class ProductServiceImpl implements ProductService {
                 ProductFile productFile = new ProductFile();
                 productFile.setProductId(product.getProductId());
                 productFile.setFileUrl(draftFile.getUrl());
+                productFile.setContentType(draftFile.getContentType());
                 fileRepo.insertProductFile(productFile);
+
                 if(firstImage){
                     // Embedding on publish is complex since the file is not available
                     firstImage = false;
@@ -641,6 +645,7 @@ public class ProductServiceImpl implements ProductService {
             ProductFile productFile = new ProductFile();
             productFile.setProductId(productId);
             productFile.setFileUrl(url);
+            productFile.setContentType(file.getContentType());
             fileRepo.insertProductFile(productFile);
         }
     }

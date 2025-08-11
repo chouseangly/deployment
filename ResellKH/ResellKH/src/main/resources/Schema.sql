@@ -65,6 +65,8 @@ CREATE TABLE product_images (
                                 product_id INTEGER REFERENCES products(product_id),
                                 url TEXT
 );
+
+
 CREATE TABLE product_embeddings (
                                     id SERIAL PRIMARY KEY,
                                     product_id BIGINT REFERENCES products(product_id) ON DELETE CASCADE UNIQUE,
@@ -135,6 +137,8 @@ CREATE TABLE product_draft_images (
                                       draft_id INTEGER REFERENCES product_drafts(draft_id) ON DELETE CASCADE,
                                       url TEXT NOT NULL
 );
+ALTER TABLE product_draft_images
+    ADD COLUMN content_type VARCHAR(100);
 
 select * from product_drafts;;
 

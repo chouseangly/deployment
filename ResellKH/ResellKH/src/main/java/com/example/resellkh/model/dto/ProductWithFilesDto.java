@@ -28,6 +28,6 @@ public class ProductWithFilesDto extends ProductDraft {
     private Double latitude;
     private Double longitude;
     private LocalDateTime createdAt;
-    private List<String> fileUrls;
+    private List<ProductFile> media;
 
 }
