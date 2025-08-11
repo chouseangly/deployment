@@ -111,7 +111,7 @@ public class AuthController {
                 .userId(Long.valueOf(auth.getUserId()))
                 .title("Welcome to ResellKH")
                 .content("Welcome to ResellKH! We’re excited to have you join our community. As a new member, you can explore great deals, post your products, and connect with trusted buyers and sellers. Stay updated with the latest promotions, features, and security tips. Thank you for choosing ResellKH — let’s grow together!")
-                .iconUrl("https://apricot-worthy-kiwi-289.mypinata.cloud/ipfs/bafkreihucy3qm5guwxnzyhunzxtdqojuxt4lpx6apu6ifihwv635a66hum")
+                .iconUrl("https://chocolate-negative-porcupine-503.mypinata.cloud/ipfs/QmPx2gFEtD5h4j4mYfZuqvoLnd6tZSVqVw3362Ty1sj8mh")
                 .build();
         notificationService.createNotificationWithType(notification);
         System.out.println("Login endpoint called for user!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!: " + login.getEmail());
@@ -191,7 +191,7 @@ public class AuthController {
                 .userId(authResponse.getUserId())
                 .title("Welcome to ResellKH")
                 .content("Welcome to ResellKH! We’re excited to have you join our community. As a new member, you can explore great deals, post your products, and connect with trusted buyers and sellers. Stay updated with the latest promotions, features, and security tips. Thank you for choosing ResellKH — let’s grow together!")
-                .iconUrl("https://gateway.pinata.cloud/ipfs/QmdMXVZ9KCiNGMwFHxkPMfpUfeGL8QQpMoENKeR5NKJ51F")
+                .iconUrl("https://chocolate-negative-porcupine-503.mypinata.cloud/ipfs/QmPx2gFEtD5h4j4mYfZuqvoLnd6tZSVqVw3362Ty1sj8mh")
                 .build();
         notificationService.createNotificationWithType(notification);
         return ResponseEntity.ok(response);

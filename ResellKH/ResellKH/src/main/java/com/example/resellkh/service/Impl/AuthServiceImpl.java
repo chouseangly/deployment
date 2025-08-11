@@ -84,7 +84,7 @@ public class AuthServiceImpl implements AuthService {
             auth = new Auth();
             auth.setFirstName(googleUserDto.getFirstName());
             auth.setLastName(googleUserDto.getLastName());
-            auth.setUserName(googleUserDto.getFirstName() + " " + googleUserDto.getLastName());
+            auth.setUserName(googleUserDto.getFirstName() + googleUserDto.getLastName());
             auth.setEmail(googleUserDto.getEmail());
             auth.setPassword(passwordEncoder.encode("google_oauth_dummy_password"));
             auth.setRole("USER");

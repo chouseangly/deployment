@@ -13,15 +13,17 @@ public interface ProductService {
     List<ProductWithFilesDto> searchByImageUrl(MultipartFile file);
     List<ProductWithFilesDto> findNearbyProducts(double lat, double lng);
     ProductWithFilesDto getProductWithFilesById(Long id);
+    List<ProductWithFilesDto> getAllProductsWithFiles(int page, int size);
+    long countAllProducts();
     List<ProductWithFilesDto> getAllProductsWithFiles();
     List<ProductWithFilesDto> getProductsByUserId(Long userId);
     List<ProductWithFilesDto> getProductsByCategoryId(Integer categoryId);
     List<ProductWithFilesDto> getAllProductsByStatus(String status);
 
     ProductDraft saveDraftProduct(String productName, Long userId, Long mainCategoryId,
-                                         Double productPrice, Double discountPercent, String description,
-                                         String location, Double latitude, Double longitude, String condition,
-                                         String telegramUrl, MultipartFile[] files);
+                                  Double productPrice, Double discountPercent, String description,
+                                  String location, Double latitude, Double longitude, String condition,
+                                  String telegramUrl, MultipartFile[] files);
 
     // MODIFIED: Added productStatus parameter here
     Object updateDraftProduct(Long draftId, String productName, Long mainCategoryId,

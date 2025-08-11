@@ -1,9 +1,6 @@
 package com.example.resellkh.controller;
 
-import com.example.resellkh.model.dto.ApiResponse;
-import com.example.resellkh.model.dto.NotificationFavorite;
-import com.example.resellkh.model.dto.ProductRequest;
-import com.example.resellkh.model.dto.ProductWithFilesDto;
+import com.example.resellkh.model.dto.*;
 import com.example.resellkh.model.entity.Notification;
 import com.example.resellkh.model.entity.Product;
 import com.example.resellkh.model.entity.ProductDraft;
@@ -17,6 +14,12 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -71,7 +74,7 @@ public class ProductController {
                 .productId(product.getProductId()) // CRITICAL: The productId is now part of the initial object.
                 .title("Add Product")
                 .content("You success fully upload product name : "+ productName)
-                .iconUrl("https://gateway.pinata.cloud/ipfs/QmdMXVZ9KCiNGMwFHxkPMfpUfeGL8QQpMoENKeR5NKJ51F")
+                .iconUrl("https://chocolate-negative-porcupine-503.mypinata.cloud/ipfs/QmPx2gFEtD5h4j4mYfZuqvoLnd6tZSVqVw3362Ty1sj8mh")
                 .build();
         notificationService.createNotificationWithType(notification);
 
@@ -82,6 +85,19 @@ public class ProductController {
                         HttpStatus.OK.value(),
                         LocalDateTime.now()
                 )
+        );
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<ApiResponse<List<ProductWithFilesDto>>> getAllProducts() {
+        List<ProductWithFilesDto> list = productService.getAllProductsWithFiles();
+        return ResponseEntity.ok(
+                ApiResponse.<List<ProductWithFilesDto>>builder()
+                        .message("All products with files fetched")
+                        .payload(list)
+                        .status(HttpStatus.OK)
+                        .timestamp(LocalDateTime.now())
+                        .build()
         );
     }
 
@@ -136,7 +152,7 @@ public class ProductController {
                 .productId(id)
                 .title("Update Product")
                 .content("You successfully Update Product name : " + productName)
-                .iconUrl("https://gateway.pinata.cloud/ipfs/QmdMXVZ9KCiNGMwFHxkPMfpUfeGL8QQpMoENKeR5NKJ51F")
+                .iconUrl("https://chocolate-negative-porcupine-503.mypinata.cloud/ipfs/QmPx2gFEtD5h4j4mYfZuqvoLnd6tZSVqVw3362Ty1sj8mh")
                 .build();
         notificationService.createNotificationWithType(notification1);
 
@@ -248,17 +264,35 @@ public class ProductController {
         );
     }
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ProductWithFilesDto>>> getAll() {
-        List<ProductWithFilesDto> list = productService.getAllProductsWithFiles();
+    public ResponseEntity<ApiResponse<PagedResponse<ProductWithFilesDto>>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size
+    ) {
+        List<ProductWithFilesDto> list = productService.getAllProductsWithFiles(page, size);
+        long totalProducts = productService.countAllProducts();
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ProductWithFilesDto> productPage = new PageImpl<>(list, pageable, totalProducts);
+
+        PagedResponse<ProductWithFilesDto> response = PagedResponse.<ProductWithFilesDto>builder()
+                .content(productPage.getContent())
+                .page(productPage.getNumber())
+                .size(productPage.getSize())
+                .totalElements(productPage.getTotalElements())
+                .totalPages(productPage.getTotalPages())
+                .last(productPage.isLast())
+                .build();
+
         return ResponseEntity.ok(
-                ApiResponse.<List<ProductWithFilesDto>>builder()
+                ApiResponse.<PagedResponse<ProductWithFilesDto>>builder()
                         .message("All products with files fetched")
-                        .payload(list)
-                        .status(HttpStatus.OK)
+                        .payload(response)
+                        .status(HttpStatus.OK.value())
                         .timestamp(LocalDateTime.now())
                         .build()
         );
     }
+
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductWithFilesDto>> deleteProduct(@PathVariable Long id) {
@@ -268,7 +302,7 @@ public class ProductController {
                 .productId(product.getProductId())
                 .title("Delete Product")
                 .content("You success fully delete product name : "+product.getProductName())
-                .iconUrl("https://gateway.pinata.cloud/ipfs/QmdMXVZ9KCiNGMwFHxkPMfpUfeGL8QQpMoENKeR5NKJ51F")
+                .iconUrl("https://chocolate-negative-porcupine-503.mypinata.cloud/ipfs/QmPx2gFEtD5h4j4mYfZuqvoLnd6tZSVqVw3362Ty1sj8mh")
                 .build();
         notificationService.createNotificationWithType(notification);
         ProductWithFilesDto deletedProduct = productServiceImpl.deleteProductAndReturnDto(id);

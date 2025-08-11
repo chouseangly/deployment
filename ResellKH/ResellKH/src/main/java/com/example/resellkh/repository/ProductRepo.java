@@ -66,8 +66,8 @@ public interface ProductRepo {
 
     @Select("""
     SELECT DISTINCT p.*
-    FROM products p 
-    LEFT JOIN product_images pi ON p.product_id = pi.product_id 
+    FROM products p
+    LEFT JOIN product_images pi ON p.product_id = pi.product_id
     WHERE p.user_id = #{userId}
     """)
     @Results({
@@ -96,6 +96,13 @@ public interface ProductRepo {
     @Select("SELECT * FROM products")
     @ResultMap("ProductResult")
     List<Product> findAll();
+
+    @Select("SELECT * FROM products ORDER BY created_at DESC LIMIT #{limit} OFFSET #{offset}")
+    @ResultMap("ProductResult")
+    List<Product> findAllWithPagination(@Param("offset") int offset, @Param("limit") int limit);
+
+    @Select("SELECT COUNT(*) FROM products")
+    long countAllProducts();
 
     @Update("""
         UPDATE products SET
@@ -126,7 +133,7 @@ public interface ProductRepo {
     void deleteProduct(Long productId);
 
     @Select("""
-    SELECT p.*, 
+    SELECT p.*,
            STRING_AGG(pi.url, ',') AS file_urls,
            (6371 * acos(
                cos(radians(#{userLat})) *
@@ -153,7 +160,7 @@ public interface ProductRepo {
     );
 
     @Select("""
-    SELECT p.*, 
+    SELECT p.*,
            string_agg(pi.url, ',') AS file_urls
     FROM products p
     LEFT JOIN product_images pi ON p.product_id = pi.product_id
@@ -235,9 +242,9 @@ public interface ProductRepo {
 // In ProductRepo interface, add these methods:
 
     @Update("""
-    UPDATE products 
-    SET product_status = #{status}, 
-        updated_at = NOW() 
+    UPDATE products
+    SET product_status = #{status},
+        updated_at = NOW()
     WHERE product_id = #{productId} AND user_id = #{userId}
 """)
     int updateProductStatus(@Param("productId") Long productId,

@@ -16,10 +16,13 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
         config.setAllowedOrigins(List.of(
-                "https://peace-investigation-called-assignment.trycloudflare.com",
+                "https://throat-socks-socks-int.trycloudflare.com",
                 "http://localhost:3000",
-                "resellkh-deploy.vercel.app",
-                "https://www.resellkh.store"
+                "https://resellkh-deploy-3n6n.vercel.app",
+                "https://www.resellkh.store",
+                "https://ali-integrity-elsewhere-moms.trycloudflare.com",
+                "https://ct-alias-annex-non.trycloudflare.com",
+                "https://www.resellkh.shop"
         ));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));

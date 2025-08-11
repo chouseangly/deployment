@@ -74,7 +74,7 @@ public class UserProfileController {
                     .userId(userId)
                     .title("Update Profile")
                     .content("You successfully update profile at "+ formattedDateTime)
-                    .iconUrl("https://gateway.pinata.cloud/ipfs/QmdMXVZ9KCiNGMwFHxkPMfpUfeGL8QQpMoENKeR5NKJ51F")
+                    .iconUrl("https://chocolate-negative-porcupine-503.mypinata.cloud/ipfs/QmPx2gFEtD5h4j4mYfZuqvoLnd6tZSVqVw3362Ty1sj8mh")
                     .build();
             notificationService.createNotificationWithType(notification);
             return ResponseEntity.ok(new ApiResponse<>("User profile updated successfully", updated, HttpStatus.OK.value(), LocalDateTime.now()));

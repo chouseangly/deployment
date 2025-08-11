@@ -58,7 +58,7 @@ public class ProductServiceImpl implements ProductService {
     private String pinataSecretApiKey;
 
     private static final String PINATA_URL = "https://api.pinata.cloud/pinning/pinFileToIPFS";
-    private static final String PYTHON_VECTOR_URL = "https://connectors-backed-dinner-virgin.trycloudflare.com/extract-vector";
+    private static final String PYTHON_VECTOR_URL = "https://exhibits-dpi-header-enhanced.trycloudflare.com/extract-vector";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Transactional
@@ -172,6 +172,7 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
+
     @Override
     public List<ProductWithFilesDto> searchByImageUrl(MultipartFile file) {
         try {
@@ -190,7 +191,7 @@ public class ProductServiceImpl implements ProductService {
             }
 
             return similarities.stream()
-                    .filter(sim -> sim.similarity > 0.6)
+                    .filter(sim -> sim.similarity > 0.72)
                     .sorted(Comparator.comparingDouble(ProductWithSimilarity::similarity).reversed())
                     .map(sim -> getProductWithFilesById(sim.productId()))
                     .filter(Objects::nonNull)
@@ -201,6 +202,8 @@ public class ProductServiceImpl implements ProductService {
             throw new RuntimeException("Failed to search by image: " + e.getMessage(), e);
         }
     }
+
+    // In ProductServiceImpl.java
 
     private void saveEmbedding(Long productId, MultipartFile imageFile) {
         try {
@@ -215,7 +218,11 @@ public class ProductServiceImpl implements ProductService {
             }
 
         } catch (Exception e) {
-            throw new RuntimeException("Failed to save embedding: " + e.getMessage(), e);
+            // DON'T throw a new exception here. Instead, log it as a warning.
+            // This allows the product upload to succeed even if the vector service fails.
+            System.err.println("WARN: Failed to save embedding for product ID " + productId + ". " +
+                    "The product was created, but image search may not work for it. Error: " + e.getMessage());
+            // By not re-throwing an exception, the transaction will continue and commit.
         }
     }
 
@@ -294,6 +301,27 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public List<ProductWithFilesDto> getAllProductsWithFiles(int page, int size) {
+        try {
+            int offset = page * size;
+            return productRepo.findAllWithPagination(offset, size).stream()
+                    .map(this::mapToDto)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get all products: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public long countAllProducts() {
+        try {
+            return productRepo.countAllProducts();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to count all products: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     public List<ProductWithFilesDto> getAllProductsWithFiles() {
         try {
             return productRepo.findAll().stream()
@@ -330,7 +358,6 @@ public class ProductServiceImpl implements ProductService {
         dto.setCategoryName(categoryName != null ? categoryName : "Unknown");
         return dto;
     }
-
     private String uploadFileToPinata(MultipartFile file) {
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             HttpPost post = new HttpPost(PINATA_URL);
@@ -346,7 +373,10 @@ public class ProductServiceImpl implements ProductService {
 
             try (CloseableHttpResponse response = httpClient.execute(post)) {
                 String json = EntityUtils.toString(response.getEntity());
-                return "https://gateway.pinata.cloud/ipfs/" + new ObjectMapper().readTree(json).get("IpfsHash").asText();
+                String ipfsHash = new ObjectMapper().readTree(json).get("IpfsHash").asText();
+
+                // ✅ FIX: The public gateway has been replaced with your dedicated one.
+                return "https://chocolate-negative-porcupine-503.mypinata.cloud/ipfs/" + ipfsHash;
             }
         } catch (IOException e) {
             throw new RuntimeException("Failed to upload file to Pinata", e);

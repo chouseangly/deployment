@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/notifications")
@@ -48,9 +49,10 @@ public class NotificationController {
     }
 
     @PutMapping("/read/{userId}/{id}")
-    public ResponseEntity<String> markNotificationsAsRead(@PathVariable Long userId, @PathVariable Long id) {
+    public ResponseEntity<Map<String, String>> markNotificationsAsRead(@PathVariable Long userId, @PathVariable Long id) {
         notificationServiceImpl.markNotificationAsRead(userId, id);
-        return ResponseEntity.ok("Notifications marked as read.");
+        // Return a JSON object for consistent API responses
+        return ResponseEntity.ok(Map.of("message", "Notification marked as read successfully."));
     }
 
     @GetMapping("/getproductidbynotid/{id}")

@@ -407,7 +407,7 @@ CREATE TABLE seller_settlements (
                                     scheduled_at TIMESTAMP NOT NULL,              -- planned payout date
                                     settled_at TIMESTAMP                           -- actual payout timestamp
 );
-delete from users where  user_id = 8;
+delete from users where  user_id = 11;
 
 SELECT * FROM seller;
 ALTER TABLE payments ADD COLUMN bank_name VARCHAR(255);
@@ -436,6 +436,36 @@ ALTER TABLE product_images ADD COLUMN content_type VARCHAR(100);
 ALTER TABLE products ADD COLUMN currency VARCHAR(10);
 SELECT * FROM products WHERE product_id > 280;
 
+TRUNCATE
+    notifications
+    RESTART IDENTITY CASCADE;
 
 
 
+-- Step 1: Delete the images of all products owned by user 11.
+
+
+
+TRUNCATE
+    users,
+    user_profile,
+    products,
+    product_images,
+    product_embeddings,
+    product_history,
+    main_category,
+    favourites,
+    ratings,
+    notifications,
+    product_drafts,
+    product_draft_images,
+    seller,
+    notification_type,
+    otp_number,
+    contact_info,
+    cart,
+    orders,
+    order_items,
+    payments,
+    seller_settlements
+    RESTART IDENTITY CASCADE;
